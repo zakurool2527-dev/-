@@ -39,11 +39,11 @@
 
 ### 🌐 デプロイ情報
 
-**本番URL**: https://91036a6e.real-estate-proposal.pages.dev  
+**本番URL**: https://8b3b249f.real-estate-proposal.pages.dev  
 **メインURL**: https://real-estate-proposal.pages.dev  
 **GitHub**: https://github.com/zakurool2527-dev/-  
 **デプロイ日**: 2025-11-11  
-**ステータス**: ✅ 稼働中（D1データベース有効、実ファイルアップロード対応、ロゴ統合済み）
+**ステータス**: ✅ 稼働中（D1データベース有効、実ファイルアップロード対応、ロゴ統合済み、エラーハンドリング強化）
 
 ## ⚠️ 重要な注意事項
 
