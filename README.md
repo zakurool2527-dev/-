@@ -39,11 +39,11 @@
 
 ### 🌐 デプロイ情報
 
-**本番URL**: https://e333721f.real-estate-proposal.pages.dev  
+**本番URL**: https://ca6e7e93.real-estate-proposal.pages.dev  
 **メインURL**: https://real-estate-proposal.pages.dev  
 **GitHub**: https://github.com/zakurool2527-dev/-  
 **デプロイ日**: 2025-11-11  
-**ステータス**: ✅ 稼働中（D1データベース有効）
+**ステータス**: ✅ 稼働中（D1データベース有効、実ファイルアップロード対応、ロゴ統合済み）
 
 ## 📝 機能エントリーポイント
 
@@ -191,11 +191,23 @@ https://webapp.pages.dev
 https://webapp.pages.dev/api/history
 ```
 
+## ✨ 最新アップデート（v2.0）
+
+1. **実ファイルアップロード機能** ✅
+   - ドラッグ&ドロップでPDFをアップロード
+   - FormData対応
+   - 自動PDF解析
+
+2. **企業ロゴ統合** ✅
+   - 株式会社おきはわアセットブリッジのロゴ
+   - ヘッダーに表示
+   - PowerPointの全スライドに統合
+
 ## ⚠️ 未実装機能
 
-1. **実際のPDFファイルアップロード**
-   - 現在はURLベースのみ対応
-   - Cloudflare R2へのファイルアップロードが必要
+1. **R2統合によるファイル永続化**
+   - 現在はBase64エンコードでDB保存
+   - 大容量ファイルには不向き
 
 2. **ODF形式の完全サポート**
    - 現在はPowerPoint形式と同じ出力
