@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Bindings, GenerateProposalRequest, Proposal } from '../types/bindings';
 import { analyzePDFWithAI } from '../utils/pdfAnalyzer';
 import { generateProposalContent } from '../utils/proposalGenerator';
-import { generatePowerPoint, generateODF } from '../utils/pptxGenerator';
+import { generatePowerPoint, generatePDF } from '../utils/pptxGenerator';
 
 const api = new Hono<{ Bindings: Bindings }>();
 
@@ -138,6 +138,7 @@ api.post('/generate-proposal', async (c) => {
     // ファイル生成
     let fileBuffer: ArrayBuffer;
     let fileExtension: string;
+    let contentType: string;
 
     if (format === 'pptx') {
       fileBuffer = await generatePowerPoint(
@@ -146,9 +147,11 @@ api.post('/generate-proposal', async (c) => {
         targetAudience
       );
       fileExtension = 'pptx';
+      contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
     } else {
-      fileBuffer = await generateODF(content, analysis.title, targetAudience);
-      fileExtension = 'odp';
+      fileBuffer = await generatePDF(content, analysis.title, targetAudience);
+      fileExtension = 'pdf';
+      contentType = 'application/pdf';
     }
 
     // ファイルをBase64エンコード（一時的な保存方法）
@@ -235,14 +238,14 @@ api.get('/download/:id', async (c) => {
     const filename =
       result.format === 'pptx'
         ? `${result.property_title}_提案資料.pptx`
-        : `${result.property_title}_提案資料.odp`;
+        : `${result.property_title}_提案資料.pdf`;
 
     return new Response(binaryData, {
       headers: {
         'Content-Type':
           result.format === 'pptx'
             ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-            : 'application/vnd.oasis.opendocument.presentation',
+            : 'application/pdf',
         'Content-Disposition': `attachment; filename="${encodeURIComponent(
           filename
         )}"`,

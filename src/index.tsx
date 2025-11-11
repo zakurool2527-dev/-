@@ -127,9 +127,9 @@ app.get('/', (c) => {
                                         <span>PowerPoint (.pptx)</span>
                                     </label>
                                     <label class="flex items-center cursor-pointer">
-                                        <input type="radio" name="format" value="odf" class="mr-2">
-                                        <i class="fas fa-file-alt text-blue-500 mr-2"></i>
-                                        <span>ODF (.odp)</span>
+                                        <input type="radio" name="format" value="pdf" class="mr-2">
+                                        <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                        <span>PDF (.pdf)</span>
                                     </label>
                                 </div>
                             </div>

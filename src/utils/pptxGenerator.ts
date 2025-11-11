@@ -1,6 +1,11 @@
 import PptxGenJS from 'pptxgenjs';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { ProposalContent, ProposalSlide } from '../types/bindings';
 import { LOGO_BASE64 } from './logo';
+
+// PDFMake用のフォント設定
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 /**
  * PowerPointファイルを生成
@@ -47,14 +52,28 @@ function addTitleSlide(slide: any, data: ProposalSlide) {
   // 背景色
   slide.background = { color: '1F4788' };
 
-  // ロゴを追加
-  slide.addImage({
-    data: LOGO_BASE64,
-    x: 0.5,
-    y: 0.5,
-    w: 3.0,
-    h: 0.6,
-  });
+  // ロゴを追加（エラー処理付き）
+  try {
+    slide.addImage({
+      data: LOGO_BASE64,
+      x: 0.5,
+      y: 0.5,
+      w: 3.0,
+      h: 0.6,
+    });
+  } catch (error) {
+    console.error('Logo addition error:', error);
+    // ロゴ追加失敗時は会社名をテキストで表示
+    slide.addText('株式会社おきはわアセットブリッジ', {
+      x: 0.5,
+      y: 0.5,
+      w: 3.0,
+      h: 0.6,
+      fontSize: 14,
+      bold: true,
+      color: 'FFFFFF',
+    });
+  }
 
   // メインタイトル
   slide.addText(data.title, {
@@ -99,14 +118,28 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
     fill: { color: '1F4788' },
   });
 
-  // ロゴを追加（ヘッダー右側）
-  slide.addImage({
-    data: LOGO_BASE64,
-    x: 6.5,
-    y: 0.2,
-    w: 3.0,
-    h: 0.6,
-  });
+  // ロゴを追加（ヘッダー右側）- エラー処理付き
+  try {
+    slide.addImage({
+      data: LOGO_BASE64,
+      x: 6.5,
+      y: 0.2,
+      w: 3.0,
+      h: 0.6,
+    });
+  } catch (error) {
+    console.error('Logo addition error:', error);
+    // ロゴ追加失敗時は会社名をテキストで表示
+    slide.addText('おきはわアセットブリッジ', {
+      x: 6.5,
+      y: 0.2,
+      w: 3.0,
+      h: 0.6,
+      fontSize: 12,
+      color: 'FFFFFF',
+      align: 'right',
+    });
+  }
 
   // タイトル
   slide.addText(data.title, {
@@ -142,7 +175,7 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
     valign: 'top',
   });
 
-  // フッター（ページ番号とロゴ）
+  // フッター（ページ番号）
   slide.addText(`${index + 1}`, {
     x: 9.2,
     y: 7.0,
@@ -153,14 +186,19 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
     align: 'right',
   });
 
-  // フッターにロゴ
-  slide.addImage({
-    data: LOGO_BASE64,
-    x: 0.3,
-    y: 6.8,
-    w: 2.0,
-    h: 0.4,
-  });
+  // フッターにロゴ - エラー処理付き
+  try {
+    slide.addImage({
+      data: LOGO_BASE64,
+      x: 0.3,
+      y: 6.8,
+      w: 2.0,
+      h: 0.4,
+    });
+  } catch (error) {
+    console.error('Footer logo addition error:', error);
+    // フッターロゴなしでも問題なし
+  }
 
   // ノート（あれば）
   if (data.notes) {
@@ -169,20 +207,105 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
 }
 
 /**
- * ODFプレゼンテーション（.odp）を生成
- * 注意: pptxgenjsはODF形式をネイティブサポートしていないため、
- * ここではPowerPoint形式で生成し、ユーザーに変換を促すか、
- * 別のライブラリを使用する必要があります。
- * 
- * 簡易実装として、PowerPointと同じ形式を返します。
+ * PDFファイルを生成
  */
-export async function generateODF(
+export async function generatePDF(
   content: ProposalContent,
   propertyTitle: string,
   targetAudience: string
 ): Promise<ArrayBuffer> {
-  // ODF生成は複雑なため、現時点ではPowerPoint形式を返す
-  // 実運用では、LibreOfficeのAPIやODF専用ライブラリを使用
-  console.warn('ODF generation not fully implemented. Returning PowerPoint format.');
-  return generatePowerPoint(content, propertyTitle, targetAudience);
+  // PDFドキュメント定義
+  const docDefinition: any = {
+    info: {
+      title: `${propertyTitle} 提案資料`,
+      author: '株式会社おきはわアセットブリッジ',
+      subject: `${propertyTitle} - ${targetAudience}向け提案`,
+    },
+    pageSize: 'A4',
+    pageMargins: [40, 60, 40, 60],
+    content: [],
+    defaultStyle: {
+      font: 'Roboto',
+    },
+    styles: {
+      header: {
+        fontSize: 28,
+        bold: true,
+        margin: [0, 0, 0, 20],
+        color: '#1F4788',
+      },
+      subheader: {
+        fontSize: 18,
+        bold: true,
+        margin: [0, 20, 0, 10],
+        color: '#333333',
+      },
+      content: {
+        fontSize: 12,
+        margin: [0, 0, 0, 10],
+      },
+    },
+  };
+
+  // 表紙ページ
+  const coverSlide = content.slides[0];
+  docDefinition.content.push(
+    {
+      text: '株式会社おきはわアセットブリッジ',
+      style: 'content',
+      margin: [0, 100, 0, 50],
+      alignment: 'center',
+    },
+    {
+      text: coverSlide.title,
+      style: 'header',
+      alignment: 'center',
+      fontSize: 32,
+    },
+    {
+      text: coverSlide.content.join('\n'),
+      style: 'content',
+      alignment: 'center',
+      margin: [0, 30, 0, 0],
+    }
+  );
+
+  // コンテンツページ
+  for (let i = 1; i < content.slides.length; i++) {
+    const slide = content.slides[i];
+    
+    docDefinition.content.push(
+      { text: '', pageBreak: 'before' },
+      { text: slide.title, style: 'subheader' },
+      {
+        ul: slide.content.map((item, idx) => ({
+          text: item,
+          margin: [0, 5, 0, 5],
+        })),
+        style: 'content',
+      }
+    );
+  }
+
+  // フッター追加
+  docDefinition.footer = function (currentPage: number, pageCount: number) {
+    return {
+      text: `株式会社おきはわアセットブリッジ - ${currentPage} / ${pageCount}`,
+      alignment: 'center',
+      fontSize: 10,
+      margin: [0, 20, 0, 0],
+    };
+  };
+
+  return new Promise((resolve, reject) => {
+    try {
+      const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+      pdfDocGenerator.getBuffer((buffer: Buffer) => {
+        resolve(buffer.buffer as ArrayBuffer);
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      reject(error);
+    }
+  });
 }

@@ -15,7 +15,7 @@ export type Proposal = {
   property_price: string | null;
   property_summary: string | null;
   generated_content: string;
-  format: 'pptx' | 'odf';
+  format: 'pptx' | 'pdf';
   file_url: string;
   created_at: string;
 };
@@ -47,7 +47,7 @@ export type GenerateProposalRequest = {
   pdfUrl: string;
   pdfFilename: string;
   targetAudience: string;
-  format: 'pptx' | 'odf';
+  format: 'pptx' | 'pdf';
   analysis: PDFAnalysis;
 };
 
