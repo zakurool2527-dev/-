@@ -128,11 +128,16 @@ api.post('/generate-proposal', async (c) => {
       return c.json({ error: 'Missing required fields' }, 400);
     }
 
+    // 環境変数チェック
+    if (!c.env) {
+      console.error('Environment bindings not available');
+    }
+
     // 提案コンテンツ生成
     const content = await generateProposalContent(
       analysis,
       targetAudience,
-      c.env.AI
+      c.env?.AI
     );
 
     // ファイル生成
@@ -157,43 +162,52 @@ api.post('/generate-proposal', async (c) => {
     // ファイルをBase64エンコード（一時的な保存方法）
     const base64File = arrayBufferToBase64(fileBuffer);
 
-    // データベースに保存
+    // データベースに保存（DBが利用可能な場合のみ）
     const proposalId = uuidv4();
     const now = new Date().toISOString();
 
-    await c.env.DB.prepare(
-      `INSERT INTO proposals (
-        id, pdf_filename, pdf_url, target_audience,
-        property_title, property_location, property_price, property_summary,
-        generated_content, format, file_url, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        proposalId,
-        pdfFilename,
-        pdfUrl,
-        targetAudience,
-        analysis.title,
-        analysis.location,
-        analysis.price,
-        analysis.summary,
-        JSON.stringify(content),
-        format,
-        `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${base64File}`,
-        now
-      )
-      .run();
+    if (c.env?.DB) {
+      try {
+        await c.env.DB.prepare(
+          `INSERT INTO proposals (
+            id, pdf_filename, pdf_url, target_audience,
+            property_title, property_location, property_price, property_summary,
+            generated_content, format, file_url, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+          .bind(
+            proposalId,
+            pdfFilename,
+            pdfUrl,
+            targetAudience,
+            analysis.title,
+            analysis.location,
+            analysis.price,
+            analysis.summary,
+            JSON.stringify(content),
+            format,
+            `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${base64File}`,
+            now
+          )
+          .run();
 
-    // 提案先カテゴリーを記録
-    await c.env.DB.prepare(
-      `INSERT INTO target_categories (name, usage_count, last_used_at)
-       VALUES (?, 1, ?)
-       ON CONFLICT(name) DO UPDATE SET
-         usage_count = usage_count + 1,
-         last_used_at = ?`
-    )
-      .bind(targetAudience, now, now)
-      .run();
+        // 提案先カテゴリーを記録
+        await c.env.DB.prepare(
+          `INSERT INTO target_categories (name, usage_count, last_used_at)
+           VALUES (?, 1, ?)
+           ON CONFLICT(name) DO UPDATE SET
+             usage_count = usage_count + 1,
+             last_used_at = ?`
+        )
+          .bind(targetAudience, now, now)
+          .run();
+      } catch (dbError) {
+        console.error('Database save error:', dbError);
+        // DB保存失敗してもファイル生成は成功しているので続行
+      }
+    } else {
+      console.warn('Database binding not available, skipping history save');
+    }
 
     return c.json({
       success: true,

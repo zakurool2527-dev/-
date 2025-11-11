@@ -6,8 +6,13 @@ import { PDFAnalysis, ProposalContent, ProposalSlide } from '../types/bindings';
 export async function generateProposalContent(
   analysis: PDFAnalysis,
   targetAudience: string,
-  ai: Ai
+  ai: Ai | undefined
 ): Promise<ProposalContent> {
+  // AIバインディングがない場合はフォールバック
+  if (!ai) {
+    console.warn('AI binding not available, using fallback content');
+    return generateFallbackContent(analysis, targetAudience);
+  }
   const prompt = `あなたは不動産の提案資料を作成するプロフェッショナルです。
 
 以下の不動産情報をもとに、「${targetAudience}」向けの提案資料（3-5枚のスライド）を作成してください。

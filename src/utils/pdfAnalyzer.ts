@@ -5,12 +5,18 @@ import { PDFAnalysis } from '../types/bindings';
  */
 export async function analyzePDFWithAI(
   pdfText: string,
-  ai: Ai
+  ai: Ai | undefined
 ): Promise<PDFAnalysis> {
+  // AIバインディングがない場合はフォールバック
+  if (!ai) {
+    console.warn('AI binding not available, using fallback analysis');
+    return fallbackAnalysis(pdfText);
+  }
+
   const prompt = `以下は不動産概要書のテキストです。この内容から重要な情報を抽出し、JSON形式で返してください。
 
 不動産概要書のテキスト:
-${pdfText}
+${pdfText.substring(0, 3000)}
 
 以下のJSON形式で情報を抽出してください：
 {
