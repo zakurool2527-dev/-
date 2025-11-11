@@ -1,5 +1,6 @@
 import PptxGenJS from 'pptxgenjs';
 import { ProposalContent, ProposalSlide } from '../types/bindings';
+import { LOGO_BASE64 } from './logo';
 
 /**
  * PowerPointファイルを生成
@@ -12,8 +13,8 @@ export async function generatePowerPoint(
   const pptx = new PptxGenJS();
 
   // プレゼンテーションのメタデータ
-  pptx.author = '不動産提案システム';
-  pptx.company = 'Real Estate Proposal System';
+  pptx.author = '株式会社おきはわアセットブリッジ';
+  pptx.company = '株式会社おきはわアセットブリッジ';
   pptx.subject = `${propertyTitle} - ${targetAudience}向け提案`;
   pptx.title = `${propertyTitle} 提案資料`;
 
@@ -45,6 +46,15 @@ export async function generatePowerPoint(
 function addTitleSlide(slide: any, data: ProposalSlide) {
   // 背景色
   slide.background = { color: '1F4788' };
+
+  // ロゴを追加
+  slide.addImage({
+    data: LOGO_BASE64,
+    x: 0.5,
+    y: 0.5,
+    w: 3.0,
+    h: 0.6,
+  });
 
   // メインタイトル
   slide.addText(data.title, {
@@ -89,11 +99,20 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
     fill: { color: '1F4788' },
   });
 
+  // ロゴを追加（ヘッダー右側）
+  slide.addImage({
+    data: LOGO_BASE64,
+    x: 6.5,
+    y: 0.2,
+    w: 3.0,
+    h: 0.6,
+  });
+
   // タイトル
   slide.addText(data.title, {
     x: 0.5,
     y: 0.2,
-    w: 9,
+    w: 6.0,
     h: 0.6,
     fontSize: 28,
     bold: true,
@@ -123,7 +142,7 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
     valign: 'top',
   });
 
-  // フッター（ページ番号）
+  // フッター（ページ番号とロゴ）
   slide.addText(`${index + 1}`, {
     x: 9.2,
     y: 7.0,
@@ -132,6 +151,15 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
     fontSize: 12,
     color: '666666',
     align: 'right',
+  });
+
+  // フッターにロゴ
+  slide.addImage({
+    data: LOGO_BASE64,
+    x: 0.3,
+    y: 6.8,
+    w: 2.0,
+    h: 0.4,
   });
 
   // ノート（あれば）

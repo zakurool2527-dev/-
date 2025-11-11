@@ -46,11 +46,18 @@ app.get('/', (c) => {
             <!-- ヘッダー -->
             <header class="bg-blue-900 text-white shadow-lg">
                 <div class="container mx-auto px-6 py-4">
-                    <h1 class="text-2xl font-bold">
-                        <i class="fas fa-file-powerpoint mr-2"></i>
-                        不動産提案資料自動生成システム
-                    </h1>
-                    <p class="text-blue-200 text-sm mt-1">PDF概要書から提案先に最適化された資料を自動生成</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <img src="/static/logo.png" alt="おきはわアセットブリッジ" class="h-12 bg-white px-3 py-1 rounded">
+                            <div>
+                                <h1 class="text-2xl font-bold">
+                                    <i class="fas fa-file-powerpoint mr-2"></i>
+                                    不動産提案資料自動生成システム
+                                </h1>
+                                <p class="text-blue-200 text-sm mt-1">PDF概要書から提案先に最適化された資料を自動生成</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </header>
 

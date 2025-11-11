@@ -83,7 +83,7 @@ function handleFileSelect(e) {
 /**
  * ファイル処理
  */
-function handleFile(file) {
+async function handleFile(file) {
   if (file.type !== 'application/pdf') {
     alert('PDFファイルを選択してください');
     return;
@@ -97,9 +97,36 @@ function handleFile(file) {
   uploadArea.classList.add('hidden');
   pdfInfo.classList.remove('hidden');
 
-  // ユーザーが提供したPDFのURLを使用
-  // 実際のアプリではファイルをアップロードしてURLを取得
-  currentPdfUrl = 'https://page.gensparksite.com/get_upload_url/fc2322519c93344df4a23fcc4efe505af9200b27a51e12b94464c52411def613/default/7d4e9e8e-3f9c-4618-9ba7-bd90cb5e1d44';
+  // ファイルをアップロードして解析
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    loading.classList.remove('hidden');
+    loading.querySelector('p').textContent = 'PDFをアップロード中...';
+
+    const response = await axios.post('/api/upload-pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    if (response.data.success) {
+      currentPdfUrl = response.data.pdfUrl;
+      analysisResult = response.data.analysis;
+      loading.classList.add('hidden');
+      
+      // 成功メッセージ
+      console.log('PDF uploaded and analyzed successfully');
+    } else {
+      throw new Error('Upload failed');
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    alert('PDFのアップロードに失敗しました: ' + (error.response?.data?.error || error.message));
+    resetPdfUpload();
+    loading.classList.add('hidden');
+  }
 
   validateForm();
 }
@@ -132,18 +159,21 @@ async function generateProposal() {
   try {
     generateBtn.disabled = true;
     loading.classList.remove('hidden');
+    loading.querySelector('p').textContent = 'AI解析中...しばらくお待ちください';
     preview.classList.add('hidden');
 
-    // 1. PDF解析
-    const analysisResponse = await axios.post('/api/analyze-pdf', {
-      pdfUrl: currentPdfUrl,
-    });
+    // 1. PDF解析（まだ解析されていない場合）
+    if (!analysisResult) {
+      const analysisResponse = await axios.post('/api/analyze-pdf', {
+        pdfUrl: currentPdfUrl,
+      });
 
-    if (!analysisResponse.data.success) {
-      throw new Error('PDF解析に失敗しました');
+      if (!analysisResponse.data.success) {
+        throw new Error('PDF解析に失敗しました');
+      }
+
+      analysisResult = analysisResponse.data.analysis;
     }
-
-    analysisResult = analysisResponse.data.analysis;
 
     // 2. 提案資料生成
     const format = document.querySelector('input[name="format"]:checked').value;

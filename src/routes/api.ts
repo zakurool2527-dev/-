@@ -8,7 +8,64 @@ import { generatePowerPoint, generateODF } from '../utils/pptxGenerator';
 const api = new Hono<{ Bindings: Bindings }>();
 
 /**
- * PDF解析エンドポイント
+ * PDFファイルアップロードエンドポイント
+ * POST /api/upload-pdf
+ */
+api.post('/upload-pdf', async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return c.json({ error: 'No file uploaded' }, 400);
+    }
+
+    // ファイルタイプチェック
+    if (file.type !== 'application/pdf') {
+      return c.json({ error: 'Only PDF files are allowed' }, 400);
+    }
+
+    // ファイルを読み込む
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Base64エンコード（一時的な保存）
+    let binary = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    const base64Data = btoa(binary);
+    
+    // Data URLを生成
+    const pdfUrl = `data:application/pdf;base64,${base64Data}`;
+
+    // PDFテキストを抽出（簡易版）
+    const pdfText = await extractTextFromPDF(arrayBuffer);
+
+    // AI解析
+    const analysis = await analyzePDFWithAI(pdfText, c.env.AI);
+
+    return c.json({
+      success: true,
+      filename: file.name,
+      size: file.size,
+      pdfUrl,
+      analysis,
+    });
+  } catch (error) {
+    console.error('PDF upload error:', error);
+    return c.json(
+      {
+        error: 'Failed to upload PDF',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * PDF解析エンドポイント（URL指定）
  * POST /api/analyze-pdf
  */
 api.post('/analyze-pdf', async (c) => {
@@ -19,7 +76,7 @@ api.post('/analyze-pdf', async (c) => {
       return c.json({ error: 'PDF URL is required' }, 400);
     }
 
-    // PDFのテキストを取得（実際にはCrawler APIなどを使用）
+    // PDFのテキストを取得
     const response = await fetch(pdfUrl);
     const pdfText = await response.text();
 
@@ -41,6 +98,20 @@ api.post('/analyze-pdf', async (c) => {
     );
   }
 });
+
+// PDFテキスト抽出ヘルパー関数
+async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
+  // Cloudflare Workersでは限定的なPDF処理
+  // 実際の実装では外部APIやPDF.jsを使用することを推奨
+  try {
+    const decoder = new TextDecoder('utf-8');
+    const text = decoder.decode(arrayBuffer);
+    return text;
+  } catch (error) {
+    console.error('PDF text extraction error:', error);
+    return '';
+  }
+}
 
 /**
  * 提案資料生成エンドポイント
