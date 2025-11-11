@@ -6,6 +6,13 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "webapp-production",
+      "database_id": "63d54994-fe59-40a1-99ac-c1f3c9d13f14"
+    }
+  ],
   "ai": {
     "binding": "AI"
   }
