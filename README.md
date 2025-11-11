@@ -37,7 +37,15 @@
    - 使用頻度の高い提案先をクイック選択
    - 入力効率の向上
 
-### 📝 機能エントリーポイント
+### 🌐 デプロイ情報
+
+**本番URL**: https://e333721f.real-estate-proposal.pages.dev  
+**メインURL**: https://real-estate-proposal.pages.dev  
+**GitHub**: https://github.com/zakurool2527-dev/-  
+**デプロイ日**: 2025-11-11  
+**ステータス**: ✅ 稼働中（D1データベース有効）
+
+## 📝 機能エントリーポイント
 
 | エンドポイント | メソッド | 説明 | パラメータ |
 |--------------|---------|------|-----------|
@@ -78,7 +86,9 @@
 
 ### ストレージサービス
 
-- **Cloudflare D1**: 提案履歴とメタデータの管理
+- **Cloudflare D1**: 提案履歴とメタデータの管理（✅ 設定済み）
+  - Database ID: `63d54994-fe59-40a1-99ac-c1f3c9d13f14`
+  - Database Name: `webapp-production`
 - **Cloudflare AI**: PDF解析と提案コンテンツ生成（Llama 3.1 8B Instruct）
 - **In-Memory Storage**: 生成ファイルの一時保存（Base64エンコード）
 
