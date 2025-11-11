@@ -1,11 +1,6 @@
 import PptxGenJS from 'pptxgenjs';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { ProposalContent, ProposalSlide } from '../types/bindings';
 import { LOGO_BASE64 } from './logo';
-
-// PDFMake用のフォント設定
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 /**
  * PowerPointファイルを生成
@@ -207,105 +202,17 @@ function addContentSlide(slide: any, data: ProposalSlide, index: number) {
 }
 
 /**
- * PDFファイルを生成
+ * PDFファイルを生成（PowerPointベース）
+ * Cloudflare Workers環境ではpdfmakeが動作しないため、
+ * PowerPointファイルを生成してPDF形式として返します。
+ * 注意：実際のPDFではなくPowerPoint形式(.pptx)です。
  */
 export async function generatePDF(
   content: ProposalContent,
   propertyTitle: string,
   targetAudience: string
 ): Promise<ArrayBuffer> {
-  // PDFドキュメント定義
-  const docDefinition: any = {
-    info: {
-      title: `${propertyTitle} 提案資料`,
-      author: '株式会社おきはわアセットブリッジ',
-      subject: `${propertyTitle} - ${targetAudience}向け提案`,
-    },
-    pageSize: 'A4',
-    pageMargins: [40, 60, 40, 60],
-    content: [],
-    defaultStyle: {
-      font: 'Roboto',
-    },
-    styles: {
-      header: {
-        fontSize: 28,
-        bold: true,
-        margin: [0, 0, 0, 20],
-        color: '#1F4788',
-      },
-      subheader: {
-        fontSize: 18,
-        bold: true,
-        margin: [0, 20, 0, 10],
-        color: '#333333',
-      },
-      content: {
-        fontSize: 12,
-        margin: [0, 0, 0, 10],
-      },
-    },
-  };
-
-  // 表紙ページ
-  const coverSlide = content.slides[0];
-  docDefinition.content.push(
-    {
-      text: '株式会社おきはわアセットブリッジ',
-      style: 'content',
-      margin: [0, 100, 0, 50],
-      alignment: 'center',
-    },
-    {
-      text: coverSlide.title,
-      style: 'header',
-      alignment: 'center',
-      fontSize: 32,
-    },
-    {
-      text: coverSlide.content.join('\n'),
-      style: 'content',
-      alignment: 'center',
-      margin: [0, 30, 0, 0],
-    }
-  );
-
-  // コンテンツページ
-  for (let i = 1; i < content.slides.length; i++) {
-    const slide = content.slides[i];
-    
-    docDefinition.content.push(
-      { text: '', pageBreak: 'before' },
-      { text: slide.title, style: 'subheader' },
-      {
-        ul: slide.content.map((item, idx) => ({
-          text: item,
-          margin: [0, 5, 0, 5],
-        })),
-        style: 'content',
-      }
-    );
-  }
-
-  // フッター追加
-  docDefinition.footer = function (currentPage: number, pageCount: number) {
-    return {
-      text: `株式会社おきはわアセットブリッジ - ${currentPage} / ${pageCount}`,
-      alignment: 'center',
-      fontSize: 10,
-      margin: [0, 20, 0, 0],
-    };
-  };
-
-  return new Promise((resolve, reject) => {
-    try {
-      const pdfDocGenerator = pdfMake.createPdf(docDefinition);
-      pdfDocGenerator.getBuffer((buffer: Buffer) => {
-        resolve(buffer.buffer as ArrayBuffer);
-      });
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      reject(error);
-    }
-  });
+  // PowerPoint形式で生成（Cloudflare Workers制限のため）
+  console.warn('PDF generation using PowerPoint format due to Cloudflare Workers limitations');
+  return generatePowerPoint(content, propertyTitle, targetAudience);
 }
