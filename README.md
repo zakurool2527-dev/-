@@ -39,7 +39,7 @@
 
 ### 🌐 デプロイ情報
 
-**本番URL**: https://8b3b249f.real-estate-proposal.pages.dev  
+**本番URL**: https://da6b3378.real-estate-proposal.pages.dev  
 **メインURL**: https://real-estate-proposal.pages.dev  
 **GitHub**: https://github.com/zakurool2527-dev/-  
 **デプロイ日**: 2025-11-11  
