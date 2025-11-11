@@ -209,10 +209,15 @@ api.post('/generate-proposal', async (c) => {
       console.warn('Database binding not available, skipping history save');
     }
 
+    // ダウンロードURLを生成（Base64データURLとして）
+    const dataUrl = `data:${contentType};base64,${base64File}`;
+
     return c.json({
       success: true,
       proposalId,
       downloadUrl: `/api/download/${proposalId}`,
+      directDownloadUrl: dataUrl, // 直接ダウンロード用URL
+      filename: `${analysis.title}_提案資料.${fileExtension}`,
       previewData: content,
     });
   } catch (error) {
@@ -235,6 +240,13 @@ api.get('/download/:id', async (c) => {
   try {
     const proposalId = c.req.param('id');
 
+    // DBが利用できない場合
+    if (!c.env?.DB) {
+      return c.json({ 
+        error: 'Database not available. Please use direct download link from generation response.' 
+      }, 503);
+    }
+
     const result = await c.env.DB.prepare(
       'SELECT * FROM proposals WHERE id = ?'
     )
@@ -247,6 +259,10 @@ api.get('/download/:id', async (c) => {
 
     // Base64からバイナリに変換
     const base64Data = result.file_url.split(',')[1];
+    if (!base64Data) {
+      return c.json({ error: 'Invalid file data' }, 500);
+    }
+
     const binaryData = base64ToArrayBuffer(base64Data);
 
     const filename =
@@ -267,7 +283,10 @@ api.get('/download/:id', async (c) => {
     });
   } catch (error) {
     console.error('Download error:', error);
-    return c.json({ error: 'Failed to download file' }, 500);
+    return c.json({ 
+      error: 'Failed to download file',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
   }
 });
 

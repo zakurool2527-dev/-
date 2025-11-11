@@ -193,7 +193,16 @@ async function generateProposal() {
 
     // プレビュー表示
     displayPreview(generateResponse.data.previewData);
-    downloadBtn.href = generateResponse.data.downloadUrl;
+    
+    // ダウンロードリンク設定（直接ダウンロードURLを使用）
+    if (generateResponse.data.directDownloadUrl) {
+      // Data URLを使用した直接ダウンロード
+      downloadBtn.href = generateResponse.data.directDownloadUrl;
+      downloadBtn.download = generateResponse.data.filename || '提案資料.pptx';
+    } else {
+      // フォールバック：API経由でダウンロード
+      downloadBtn.href = generateResponse.data.downloadUrl;
+    }
 
     loading.classList.add('hidden');
     preview.classList.remove('hidden');
