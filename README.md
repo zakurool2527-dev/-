@@ -39,11 +39,18 @@
 
 ### 🌐 デプロイ情報
 
-**本番URL**: https://ca6e7e93.real-estate-proposal.pages.dev  
+**本番URL**: https://91036a6e.real-estate-proposal.pages.dev  
 **メインURL**: https://real-estate-proposal.pages.dev  
 **GitHub**: https://github.com/zakurool2527-dev/-  
 **デプロイ日**: 2025-11-11  
 **ステータス**: ✅ 稼働中（D1データベース有効、実ファイルアップロード対応、ロゴ統合済み）
+
+## ⚠️ 重要な注意事項
+
+**PDF出力フォーマットについて**:
+- UIでは「PDF (.pdf)」と表示されていますが、Cloudflare Workers環境の制限により、実際の出力は **PowerPoint形式(.pptx)** です
+- ダウンロードされるファイルはPowerPointファイルとして保存されます
+- PDFが必要な場合は、PowerPointファイルをダウンロード後、Microsoft PowerPointやGoogle Slidesで「PDFとしてエクスポート」を選択してください
 
 ## 📝 機能エントリーポイント
 
