@@ -1,0 +1,1306 @@
+<title>Codex と Claude Code の OS 差分</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   Tokens — light is the base; dark redefines tokens only.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --ground:#EDF0F3;
+  --stage:#FFFFFF;
+  --panel:#F6F8FA;
+  --panel-2:#EBEFF3;
+  --ink:#111820;
+  --ink-2:#4C5762;
+  --ink-3:#7B8792;
+  --rule:#D4DAE0;
+  --rule-soft:#E4E9ED;
+  --codex:#0B5E78;
+  --codex-wash:#E6F0F4;
+  --claude:#8A6B1F;
+  --claude-wash:#F4EEDE;
+  --yes:#2C7A50;
+  --no:#AE3B33;
+  --shadow:0 1px 2px rgba(17,24,32,.05), 0 18px 44px -18px rgba(17,24,32,.28);
+
+  --f-jp:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0B0F13;
+    --stage:#151B21;
+    --panel:#1B232A;
+    --panel-2:#212B33;
+    --ink:#E7EDF2;
+    --ink-2:#A5B1BB;
+    --ink-3:#78858F;
+    --rule:#2B353E;
+    --rule-soft:#232D35;
+    --codex:#5CB7D6;
+    --codex-wash:#12303C;
+    --claude:#D6AC55;
+    --claude-wash:#33290F;
+    --yes:#5FBE8A;
+    --no:#E2776C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 22px 50px -20px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0B0F13;
+  --stage:#151B21;
+  --panel:#1B232A;
+  --panel-2:#212B33;
+  --ink:#E7EDF2;
+  --ink-2:#A5B1BB;
+  --ink-3:#78858F;
+  --rule:#2B353E;
+  --rule-soft:#232D35;
+  --codex:#5CB7D6;
+  --codex-wash:#12303C;
+  --claude:#D6AC55;
+  --claude-wash:#33290F;
+  --yes:#5FBE8A;
+  --no:#E2776C;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 22px 50px -20px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--f-jp);
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+
+/* ── Viewport & scaled stage ───────────────────────────────── */
+#viewport{
+  position:fixed; inset:0;
+  display:flex; align-items:center; justify-content:center;
+}
+#deck{
+  width:1280px; height:720px;
+  transform-origin:center center;
+  position:relative;
+}
+
+.slide{
+  position:absolute; inset:0;
+  background:var(--stage);
+  border:1px solid var(--rule);
+  border-radius:4px;
+  box-shadow:var(--shadow);
+  padding:52px 60px 0;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  opacity:0; visibility:hidden;
+  transition:opacity .28s ease;
+}
+.slide.is-active{opacity:1; visibility:visible;}
+@media (prefers-reduced-motion: reduce){ .slide{transition:none;} }
+
+/* ── Slide head ────────────────────────────────────────────── */
+.eyebrow{
+  font-family:var(--f-mono); font-size:11px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-3);
+  display:flex; align-items:center; gap:12px;
+}
+.eyebrow::after{content:""; flex:1; height:1px; background:var(--rule-soft);}
+h2.title{
+  font-size:33px; font-weight:900; line-height:1.24;
+  letter-spacing:.005em; margin:14px 0 0;
+  text-wrap:balance;
+}
+.lead{
+  font-size:15px; line-height:1.7; color:var(--ink-2);
+  margin:10px 0 0; max-width:104ch;
+}
+.body{
+  padding-top:26px; min-height:0;
+  display:flex; flex-direction:column;
+}
+
+/* ── Instrument rail ───────────────────────────────────────── */
+.rail{
+  display:flex; align-items:center; gap:16px;
+  height:46px; border-top:1px solid var(--rule-soft);
+  font-family:var(--f-mono); font-size:10.5px; letter-spacing:.1em;
+  color:var(--ink-3);
+}
+.rail .sec{text-transform:uppercase;}
+.rail .spacer{flex:1;}
+.rail .num{font-variant-numeric:tabular-nums; color:var(--ink-2); font-weight:500;}
+
+/* ── Product identity ──────────────────────────────────────── */
+.pname{
+  font-family:var(--f-mono); font-weight:700; letter-spacing:.04em;
+}
+.pname--codex{color:var(--codex);}
+.pname--claude{color:var(--claude);}
+
+/* ── Matrix table ──────────────────────────────────────────── */
+.mxwrap{overflow-x:auto; overflow-y:auto; max-height:100%;}
+table.mx{
+  width:100%; border-collapse:collapse;
+  font-size:13px; line-height:1.55;
+}
+table.mx th, table.mx td{
+  text-align:left; vertical-align:top;
+  padding:11px 14px;
+  border-bottom:1px solid var(--rule-soft);
+}
+table.mx thead th{
+  font-family:var(--f-mono); font-size:10.5px; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase;
+  color:var(--ink-3);
+  border-bottom:1px solid var(--rule);
+  padding-bottom:9px; padding-top:0;
+  white-space:nowrap;
+}
+table.mx thead th.c-codex{color:var(--codex); border-bottom:2px solid var(--codex);}
+table.mx thead th.c-claude{color:var(--claude); border-bottom:2px solid var(--claude);}
+table.mx tbody tr:last-child td{border-bottom:none;}
+table.mx td.rowhead{
+  font-weight:700; color:var(--ink); width:20%;
+  background:var(--panel);
+}
+table.mx td.rowhead .sub{
+  display:block; font-weight:400; font-size:11.5px; color:var(--ink-3); margin-top:2px;
+}
+table.mx.zebra tbody tr:nth-child(odd) td:not(.rowhead){background:var(--panel);}
+table.mx td.col-codex{background:var(--codex-wash);}
+table.mx td.col-claude{background:var(--claude-wash);}
+
+/* ── Status glyphs ─────────────────────────────────────────── */
+.st{display:inline-flex; align-items:baseline; gap:7px;}
+.st b{font-weight:700;}
+.g{font-family:var(--f-mono); font-size:13px; font-weight:700; line-height:1;}
+.g--yes{color:var(--yes);}
+.g--no{color:var(--no);}
+.g--cond{color:var(--ink-3);}
+.st--no b{color:var(--no);}
+.detail{display:block; font-size:11.5px; color:var(--ink-2); margin-top:3px; line-height:1.5;}
+
+/* ── Code / identifiers ────────────────────────────────────── */
+code, .mono{
+  font-family:var(--f-mono); font-size:.88em;
+  background:var(--panel-2); border-radius:3px;
+  padding:1px 5px; color:var(--ink);
+  overflow-wrap:anywhere; word-break:normal;
+}
+.chip{white-space:nowrap;}
+.mxwrap code{font-size:11.5px;}
+
+/* ── Split columns ─────────────────────────────────────────── */
+.split{display:grid; gap:0; flex:0 0 auto; min-height:0;}
+.split--2{grid-template-columns:1fr 1fr;}
+.split--3{grid-template-columns:1fr 1fr 1fr;}
+.col{padding:0 26px; border-left:1px solid var(--rule-soft);}
+.col:first-child{padding-left:0; border-left:none;}
+.col:last-child{padding-right:0;}
+.colhead{
+  font-family:var(--f-mono); font-size:11px; font-weight:700;
+  letter-spacing:.13em; text-transform:uppercase;
+  padding-bottom:9px; margin-bottom:19px;
+  border-bottom:2px solid var(--rule);
+}
+.colhead--codex{color:var(--codex); border-bottom-color:var(--codex);}
+.colhead--claude{color:var(--claude); border-bottom-color:var(--claude);}
+.colhead--mac{color:var(--ink); border-bottom-color:var(--ink-3);}
+
+/* ── Definition list ───────────────────────────────────────── */
+dl.kv{margin:0; font-size:13.5px; line-height:1.78;}
+dl.kv dt{
+  font-weight:700; color:var(--ink); margin-top:19px;
+  display:flex; align-items:baseline; gap:8px;
+}
+dl.kv dt:first-child{margin-top:0;}
+dl.kv dd{margin:5px 0 0; color:var(--ink-2);}
+
+/* ── Bullet list ───────────────────────────────────────────── */
+ul.pts{margin:0; padding:0; list-style:none; font-size:13.5px; line-height:1.78;}
+ul.pts li{position:relative; padding-left:17px; margin-top:15px; color:var(--ink-2);}
+ul.pts li:first-child{margin-top:0;}
+ul.pts li::before{
+  content:""; position:absolute; left:0; top:.62em;
+  width:6px; height:1px; background:var(--ink-3);
+}
+ul.pts li b{color:var(--ink); font-weight:700;}
+ul.pts li.warn::before{background:var(--no); height:2px; top:.58em;}
+
+/* ── Numbered findings (real sequence: ranked by impact) ───── */
+ol.rank{margin:0; padding:0; list-style:none; display:grid; gap:26px;}
+ol.rank li{
+  display:grid; grid-template-columns:56px 1fr; gap:20px; align-items:start;
+  padding-bottom:24px; border-bottom:1px solid var(--rule-soft);
+}
+ol.rank li:last-child{border-bottom:none; padding-bottom:0;}
+ol.rank .rk{
+  font-family:var(--f-mono); font-size:30px; font-weight:700;
+  color:var(--ink-3); line-height:1; padding-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+ol.rank h3{margin:0 0 8px; font-size:17px; font-weight:700; line-height:1.45;}
+ol.rank p{margin:0; font-size:13.5px; line-height:1.82; color:var(--ink-2);}
+
+/* ── Chips ─────────────────────────────────────────────────── */
+.chip{
+  display:inline-block; font-family:var(--f-mono);
+  font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  padding:2px 7px; border-radius:2px; border:1px solid currentColor;
+  vertical-align:middle;
+}
+.chip--mac{color:var(--ink-2);}
+.chip--win{color:var(--ink-2);}
+.chip--sec{color:var(--ink-3); border-style:dashed;}
+
+/* ── Footnote ──────────────────────────────────────────────── */
+.note{
+  font-size:11px; line-height:1.6; color:var(--ink-3);
+  margin:14px 0 0; padding-top:10px; border-top:1px dotted var(--rule);
+}
+.note .mk{font-family:var(--f-mono); font-weight:700; color:var(--ink-2);}
+
+/* ── Callout ───────────────────────────────────────────────── */
+.callout{
+  background:var(--panel); border-left:3px solid var(--ink-3);
+  padding:14px 18px; font-size:13px; line-height:1.65; color:var(--ink-2);
+}
+.callout b{color:var(--ink);}
+.callout--alert{border-left-color:var(--no);}
+
+/* ── Title slide ───────────────────────────────────────────── */
+.slide--title{grid-template-rows:1fr auto; padding-top:56px;}
+.tt-grid{display:grid; grid-template-columns:1.1fr .9fr; gap:58px; align-items:center;}
+.tt-kicker{
+  font-family:var(--f-mono); font-size:11.5px; font-weight:500;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--ink-3);
+}
+h1{
+  font-size:45px; font-weight:900; line-height:1.22; margin:24px 0 0;
+  letter-spacing:-.005em; text-wrap:balance;
+}
+.tt-sub{font-size:15px; line-height:1.78; color:var(--ink-2); margin:22px 0 0;}
+
+/* Thesis card — the one differing cell, stated up front */
+.thesis{
+  border:1px solid var(--rule); border-radius:3px;
+  background:var(--panel); padding:22px 26px;
+}
+.thesis-h{
+  font-family:var(--f-mono); font-size:10.5px; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:12px; border-bottom:1px solid var(--rule);
+}
+table.tmini{width:100%; border-collapse:collapse; font-size:12.5px;}
+table.tmini th{
+  font-family:var(--f-mono); font-size:10px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:12px 0 9px; text-align:center; white-space:nowrap;
+}
+table.tmini th:first-child{text-align:left;}
+table.tmini th.h-codex{color:var(--codex);}
+table.tmini th.h-claude{color:var(--claude);}
+table.tmini td{
+  padding:10px 0; border-top:1px solid var(--rule-soft);
+  text-align:center; color:var(--ink-2);
+}
+table.tmini td:first-child{text-align:left; color:var(--ink); font-weight:500;}
+table.tmini tr.hit td{background:var(--stage);}
+.thesis-n{
+  margin:16px 0 0; padding-top:13px; border-top:1px solid var(--rule);
+  font-size:11.5px; line-height:1.65; color:var(--ink-3);
+}
+.thesis-n b{color:var(--no); font-weight:700;}
+.vs{
+  display:flex; align-items:center; gap:22px; margin-top:34px;
+  font-family:var(--f-mono); font-size:19px; font-weight:700; letter-spacing:.03em;
+}
+.vs .x{color:var(--ink-3); font-size:13px; font-weight:400;}
+.vs .os{
+  font-size:11px; letter-spacing:.14em; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:3px 8px; font-weight:500;
+}
+
+/* ── Legend ────────────────────────────────────────────────── */
+.legend{
+  display:flex; gap:22px; flex-wrap:wrap;
+  font-size:11.5px; color:var(--ink-3); margin-top:14px;
+}
+.legend span{display:inline-flex; align-items:baseline; gap:6px;}
+
+/* ── Nav controls ──────────────────────────────────────────── */
+.ticks{display:flex; gap:3px; align-items:center;}
+.ticks button{
+  width:13px; height:14px; padding:0; border:none; background:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.ticks button::after{
+  content:""; width:100%; height:2px; background:var(--rule); border-radius:1px;
+  transition:background .2s ease;
+}
+.ticks button[aria-current="true"]::after{background:var(--ink);}
+.ticks button:hover::after{background:var(--ink-2);}
+.ticks button:focus-visible{outline:2px solid var(--ink); outline-offset:2px; border-radius:2px;}
+.arrows{display:flex; gap:4px;}
+.arrows button{
+  font-family:var(--f-mono); font-size:12px; line-height:1;
+  width:26px; height:22px; cursor:pointer;
+  background:none; border:1px solid var(--rule); border-radius:2px;
+  color:var(--ink-2);
+}
+.arrows button:hover{border-color:var(--ink-3); color:var(--ink);}
+.arrows button:disabled{opacity:.35; cursor:default;}
+.arrows button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+
+.hint{
+  position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+  font-family:var(--f-mono); font-size:10.5px; letter-spacing:.1em;
+  color:var(--ink-3); pointer-events:none;
+  transition:opacity .5s ease;
+}
+
+/* ── Print / PDF ───────────────────────────────────────────── */
+@media print{
+  @page{size:1280px 720px; margin:0;}
+  body{overflow:visible; background:#fff;}
+  #viewport{position:static; display:block;}
+  #deck{width:auto; height:auto; transform:none !important;}
+  .slide{
+    position:relative; inset:auto;
+    width:1280px; height:720px;
+    opacity:1 !important; visibility:visible !important;
+    box-shadow:none; border:none; border-radius:0;
+    break-after:page; page-break-after:always;
+  }
+  .hint, .arrows, .ticks{display:none;}
+}
+</style>
+
+<div id="viewport">
+  <div id="deck">
+
+  <!-- ══ 01 ══ -->
+  <section class="slide slide--title" data-sec="Overview">
+    <div class="tt-grid">
+      <div>
+        <div class="tt-kicker">Developer Tooling Brief · 2026.08.18</div>
+        <h1>Codex と Claude Code、Windows と macOS で何が違うのか</h1>
+        <p class="tt-sub">
+          同じ「ターミナル型コーディングエージェント」でも、OS の境界機構が違えば、できることが変わります。
+          サンドボックス・シェル実行・デスクトップ操作の 3 点を軸に、両製品の Windows 版と macOS 版を実装レベルで対比します。
+        </p>
+        <div class="vs">
+          <span class="pname pname--codex">Codex</span>
+          <span class="x">against</span>
+          <span class="pname pname--claude">Claude&nbsp;Code</span>
+          <span class="os">macOS</span>
+          <span class="os">Windows</span>
+          <span class="os">WSL2</span>
+        </div>
+      </div>
+      <div class="thesis">
+        <div class="thesis-h">結論を先に — サンドボックスは効くか</div>
+        <table class="tmini">
+          <tbody>
+            <tr>
+              <th></th>
+              <th class="h-codex">Codex</th>
+              <th class="h-claude">Claude Code</th>
+            </tr>
+            <tr>
+              <td>macOS</td>
+              <td><span class="g g--yes">●</span></td>
+              <td><span class="g g--yes">●</span></td>
+            </tr>
+            <tr class="hit">
+              <td>Windows ネイティブ</td>
+              <td><span class="g g--yes">●</span></td>
+              <td><span class="g g--no">✕</span></td>
+            </tr>
+            <tr>
+              <td>WSL2</td>
+              <td><span class="g g--yes">●</span></td>
+              <td><span class="g g--yes">●</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="thesis-n"><b>この 1 セル</b>が、Windows での運用設計を分けます。実装の詳細は 05〜08 枚目。</p>
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Codex × Claude Code / OS Capability Matrix</span>
+      <span class="spacer"></span>
+      <span class="num">01 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 02 ══ -->
+  <section class="slide" data-sec="Overview">
+    <div>
+      <div class="eyebrow">結論</div>
+      <h2 class="title">差は「OS の隔離機構をどこまで使えるか」に集約される</h2>
+    </div>
+    <div class="body">
+      <ol class="rank">
+        <li>
+          <div class="rk">01</div>
+          <div>
+            <h3>サンドボックス — ネイティブ Windows で明暗が分かれる</h3>
+            <p>
+              <span class="pname pname--claude">Claude Code</span> のサンドボックスは macOS・Linux・WSL2 でのみ動作し、<b>ネイティブ Windows では非対応</b>。
+              一方 <span class="pname pname--codex">Codex</span> は Windows 専用のサンドボックス（制限付きトークン方式）を実装し、3 OS すべてで隔離が効きます。
+              Windows で Claude Code に強い隔離を求めるなら、WSL2 に寄せるのが唯一の道です。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="rk">02</div>
+          <div>
+            <h3>シェル — Windows での「素の実行環境」が違う</h3>
+            <p>
+              Codex は Windows で PowerShell をネイティブに扱います。Claude Code は Git for Windows を入れれば Git Bash 経由の Bash ツール、
+              入れなければ PowerShell ツールに切り替わる二段構え。同じプロンプトでも生成されるコマンドの方言が変わります。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="rk">03</div>
+          <div>
+            <h3>デスクトップ操作 — macOS だけが「並列・背後で」動く</h3>
+            <p>
+              Codex の Computer Use は macOS ではバックグラウンドで複数エージェントが並列動作し、ユーザーの作業を妨げません。
+              Windows ではアクティブデスクトップ上でのみ動作し、実行中はポインタと前面を占有します。<span class="chip chip--sec">二次情報</span>
+            </p>
+          </div>
+        </li>
+      </ol>
+    </div>
+    <div class="rail">
+      <span class="sec">Executive Summary</span>
+      <span class="spacer"></span>
+      <span class="num">02 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 03 ══ -->
+  <section class="slide" data-sec="Overview">
+    <div>
+      <div class="eyebrow">前提の整理</div>
+      <h2 class="title">まず「Codex」「Claude Code」の指す範囲を揃える</h2>
+      <p class="lead">どちらも単一の製品ではなく 4 レイヤーの製品群です。OS 差はレイヤーごとに現れ方が違うため、比較の粒度を先に固定します。</p>
+    </div>
+    <div class="body">
+      <div class="mxwrap">
+        <table class="mx">
+          <thead>
+            <tr>
+              <th style="width:15%">レイヤー</th>
+              <th class="c-codex" style="width:42.5%">Codex（OpenAI）</th>
+              <th class="c-claude" style="width:42.5%">Claude Code（Anthropic）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rowhead">CLI<span class="sub">ターミナル本体</span></td>
+              <td class="col-codex">Codex CLI（Rust 実装）<span class="detail">macOS / Linux / Windows ネイティブ / WSL2</span></td>
+              <td class="col-claude"><code>claude</code>（ネイティブバイナリ）<span class="detail">macOS 13+ / Windows 10 1809+ / Ubuntu 20.04+ / Debian 10+ / Alpine 3.19+</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">デスクトップ<span class="sub">GUI アプリ</span></td>
+              <td class="col-codex">Codex app<span class="detail">macOS 先行（2026-02）→ Windows（2026-03-04）<span class="chip chip--sec">二次情報</span></span></td>
+              <td class="col-claude">Claude デスクトップアプリの <b>Code</b> タブ<span class="detail">macOS（Universal）/ Windows（x64・ARM64）/ Linux（beta）</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">クラウド<span class="sub">ブラウザ実行</span></td>
+              <td class="col-codex">Codex Web<span class="detail">OS 非依存。ローカル OS の制約を受けない</span></td>
+              <td class="col-claude">Claude Code on the web<span class="detail">OS 非依存。デスクトップアプリの Cloud セッションと同一基盤</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">IDE 拡張<span class="sub">エディタ統合</span></td>
+              <td class="col-codex">Codex IDE 拡張（VS Code 系）</td>
+              <td class="col-claude">VS Code 拡張 / JetBrains プラグイン</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <span class="mk">本資料の対象：</span>OS 差が実際に効くのは <b>CLI</b> と <b>デスクトップ</b> の 2 レイヤーです。クラウド実行はどちらも OS 非依存のため、以降は扱いません。
+      </p>
+    </div>
+    <div class="rail">
+      <span class="sec">Product Landscape</span>
+      <span class="spacer"></span>
+      <span class="num">03 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 04 ══ -->
+  <section class="slide" data-sec="Install">
+    <div>
+      <div class="eyebrow">導入</div>
+      <h2 class="title">対応 OS とインストール経路</h2>
+    </div>
+    <div class="body">
+      <div class="mxwrap">
+        <table class="mx">
+          <thead>
+            <tr>
+              <th style="width:16%">項目</th>
+              <th class="c-codex" style="width:42%">Codex</th>
+              <th class="c-claude" style="width:42%">Claude Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rowhead">macOS</td>
+              <td class="col-codex"><code>curl -fsSL https://chatgpt.com/codex/install.sh | sh</code><span class="detail"><code>brew install --cask codex</code> / <code>npm i -g @openai/codex</code></span></td>
+              <td class="col-claude"><code>curl -fsSL https://claude.ai/install.sh | bash</code><span class="detail"><code>brew install --cask claude-code</code>（<code>@latest</code> cask で最新チャンネル）</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">Windows</td>
+              <td class="col-codex"><code>irm https://chatgpt.com/codex/install.ps1 | iex</code><span class="detail">Codex app は Microsoft Store / <code>winget install Codex -s msstore</code><span class="chip chip--sec">二次情報</span></span></td>
+              <td class="col-claude"><code>irm https://claude.ai/install.ps1 | iex</code>（PowerShell）<span class="detail">CMD は <code>install.cmd</code> / <code>winget install Anthropic.ClaudeCode</code></span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">Linux / WSL</td>
+              <td class="col-codex">macOS と同一のインストーラ</td>
+              <td class="col-claude">同一のインストーラ ＋ 署名付き <code>apt</code> / <code>dnf</code> / <code>apk</code> リポジトリ</td>
+            </tr>
+            <tr>
+              <td class="rowhead">自動更新</td>
+              <td class="col-codex">ネイティブインストーラ経由で更新</td>
+              <td class="col-claude">ネイティブは<b>バックグラウンド自動更新</b>。Homebrew / WinGet / apt 系は手動<span class="detail"><code>autoUpdatesChannel</code> で <code>latest</code> / <code>stable</code> を選択。<code>minimumVersion</code> で下限を固定</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">コード署名</td>
+              <td class="col-codex">配布物は公式リリースから取得</td>
+              <td class="col-claude">macOS＝Anthropic PBC 署名＋<b>Apple 公証</b> / Windows＝Authenticode「Anthropic, PBC」/ Linux＝個別署名なし（署名付きマニフェストで検証）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><span class="mk">補足：</span>Claude Code の npm パッケージは Node.js 22+ が必要（v2.1.198 以降）。対応プラットフォームに <code>win32-x64</code> / <code>win32-arm64</code> / <code>darwin-arm64</code> / <code>darwin-x64</code> を含みます。</p>
+    </div>
+    <div class="rail">
+      <span class="sec">Installation</span>
+      <span class="spacer"></span>
+      <span class="num">04 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 05 ══ -->
+  <section class="slide" data-sec="Sandbox">
+    <div>
+      <div class="eyebrow">核心 — 対比マトリクス</div>
+      <h2 class="title">サンドボックス対応表：ここが最大の分岐点</h2>
+    </div>
+    <div class="body">
+      <div class="mxwrap">
+        <table class="mx">
+          <thead>
+            <tr>
+              <th style="width:18%">実行環境</th>
+              <th class="c-codex" style="width:41%">Codex</th>
+              <th class="c-claude" style="width:41%">Claude Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rowhead">macOS</td>
+              <td class="col-codex"><span class="st"><span class="g g--yes">●</span><b>対応</b></span><span class="detail">Seatbelt。<code>/usr/bin/sandbox-exec</code> を絶対パスで呼び、<code>.sbpl</code> ポリシーを埋め込み</span></td>
+              <td class="col-claude"><span class="st"><span class="g g--yes">●</span><b>対応</b></span><span class="detail">Seatbelt。OS 内蔵のためインストール作業は不要</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">Linux</td>
+              <td class="col-codex"><span class="st"><span class="g g--yes">●</span><b>対応</b></span><span class="detail">Landlock（FS）＋ seccomp（syscall）。bubblewrap 経路も実装</span></td>
+              <td class="col-claude"><span class="st"><span class="g g--yes">●</span><b>対応</b></span><span class="detail">bubblewrap（FS）＋ socat（ネットワーク）。seccomp フィルタは任意で追加</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">Windows ネイティブ<span class="sub">PowerShell / CMD</span></td>
+              <td class="col-codex"><span class="st"><span class="g g--yes">●</span><b>対応</b></span><span class="detail">Windows 専用実装。<code>elevated</code>（推奨）と <code>unelevated</code> の 2 モード<span class="chip chip--sec">二次情報</span></span></td>
+              <td class="col-claude"><span class="st st--no"><span class="g g--no">✕</span><b>非対応</b></span><span class="detail">公式ドキュメント：「The sandbox does not run on native Windows」。承認モデルのみが防御線</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">WSL2</td>
+              <td class="col-codex"><span class="st"><span class="g g--yes">●</span><b>対応</b></span><span class="detail">Linux 実装をそのまま利用。ネイティブサンドボックスが使えない環境の逃げ道</span></td>
+              <td class="col-claude"><span class="st"><span class="g g--yes">●</span><b>対応</b></span><span class="detail">Linux と同一（bubblewrap）。<b>Windows で隔離を得る唯一の手段</b></span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">WSL1</td>
+              <td class="col-codex"><span class="st"><span class="g g--cond">○</span>実質対象外</span></td>
+              <td class="col-claude"><span class="st st--no"><span class="g g--no">✕</span><b>非対応</b></span><span class="detail">bubblewrap が要求するカーネル機能が WSL1 に無いため</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <span><span class="g g--yes">●</span> 対応</span>
+        <span><span class="g g--cond">○</span> 条件付き / 対象外</span>
+        <span><span class="g g--no">✕</span> 非対応</span>
+      </div>
+      <div class="callout callout--alert" style="margin-top:20px">
+        <b>この表の読み方：</b>両者とも macOS・Linux では OS 標準の隔離機構を使っており、差はほとんどありません。<b>分岐するのはネイティブ Windows の 1 行だけ</b>です。
+        Codex は Windows 用の隔離機構を自前で実装したのに対し、Claude Code は実装せず「WSL2 を使ってください」という設計判断をしています。
+        Windows 端末が主戦場のチームでは、この 1 行が製品選定と運用設計の両方を決めます。
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Sandbox Matrix</span>
+      <span class="spacer"></span>
+      <span class="num">05 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 06 ══ -->
+  <section class="slide" data-sec="Sandbox">
+    <div>
+      <div class="eyebrow">実装の内訳 — <span class="pname pname--codex">Codex</span></div>
+      <h2 class="title">Codex は OS ごとに別々の隔離機構を実装している</h2>
+    </div>
+    <div class="body">
+      <div class="split split--3">
+        <div class="col">
+          <div class="colhead colhead--mac">macOS — Seatbelt</div>
+          <ul class="pts">
+            <li><b>Apple Seatbelt</b> を <code>/usr/bin/sandbox-exec</code> 経由で使用。PATH ではなく絶対パスで呼ぶことでパス乗っ取りに耐性を持たせている。</li>
+            <li>ポリシーは <code>.sbpl</code> ファイルとしてバイナリに埋め込み（基本ポリシー／ネットワークポリシーを分離）。</li>
+            <li>ネットワークはループバックと検出したプロキシポートに縮退。</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--mac">Linux — Landlock</div>
+          <ul class="pts">
+            <li><b>Landlock</b>（カーネル 5.13+）でファイルシステム、<b>seccomp</b> でシステムコールを制限。root 権限は不要。</li>
+            <li>読み取りは広く許可、書き込みは許可ディレクトリと <code>/dev/null</code> に限定するのが既定の考え方。</li>
+            <li><b>bubblewrap</b> 経路も実装されており、環境に応じて選択される。</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--mac">Windows — 制限付きトークン</div>
+          <ul class="pts">
+            <li>Seatbelt / Landlock に相当する仕組みが無いため、<b>Windows 独自の実装</b>を用意している。</li>
+            <li>合成 SID と <b>write-restricted token</b>、ACL によるファイル境界が中核。</li>
+            <li>モードにより強度が変わる（次スライド）。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:20px">
+        <b>設計思想の違い：</b>Codex は 3 つの OS すべてに隔離実装を用意し、サンドボックスを<b>既定で有効にする</b>方針を採っています<span class="chip chip--sec">二次情報</span>。
+        対する Claude Code は <code>/sandbox</code> でモードと境界を設定する方式で、隔離が成立するのは macOS・Linux・WSL2 に限られます。
+        「どの OS でも同じ強度を出す」か「OS が提供する機構がある環境に絞る」か、という方針の差として捉えると理解しやすくなります。
+      </div>
+      <p class="note">
+        <span class="mk">確認方法：</span>実装ファイルは <code>openai/codex</code> リポジトリの <code>codex-rs/sandboxing/src/</code> に <code>seatbelt.rs</code> / <code>landlock.rs</code> / <code>bwrap.rs</code> / <code>windows.rs</code> として存在し、OS 別に分かれていることが確認できます。
+      </p>
+    </div>
+    <div class="rail">
+      <span class="sec">Codex Sandbox Internals</span>
+      <span class="spacer"></span>
+      <span class="num">06 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 07 ══ -->
+  <section class="slide" data-sec="Sandbox">
+    <div>
+      <div class="eyebrow">Windows 深掘り — <span class="pname pname--codex">Codex</span></div>
+      <h2 class="title">elevated と unelevated：同じ Windows でも隔離の強さが違う</h2>
+      <p class="lead">Codex の Windows サンドボックスは 2 モードあり、<b>管理者権限の有無</b>で選べる強度が変わります。ここは Windows 版だけに存在する意思決定ポイントです。</p>
+    </div>
+    <div class="body">
+      <div class="mxwrap">
+        <table class="mx zebra">
+          <thead>
+            <tr>
+              <th style="width:20%">観点</th>
+              <th style="width:40%"><code>elevated</code>（推奨）</th>
+              <th style="width:40%"><code>unelevated</code>（フォールバック）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rowhead">実行主体</td>
+              <td>専用のローカル Windows ユーザーを作成し、その権限で実行（<code>CodexSandboxOffline</code> / <code>CodexSandboxOnline</code>）</td>
+              <td>現在ログイン中のユーザーのまま、制限付きトークンで実行</td>
+            </tr>
+            <tr>
+              <td class="rowhead">ファイル境界</td>
+              <td>ACL ＋ 専用ユーザーによる二重の境界</td>
+              <td>ACL ベースの境界のみ（専用ユーザーの境界は無い）</td>
+            </tr>
+            <tr>
+              <td class="rowhead">ネットワーク隔離</td>
+              <td><span class="st"><span class="g g--yes">●</span><b>OS 強制</b></span>Windows ファイアウォールで送信を deny。ネットワークが必要なコマンドだけ deny 規則の無いユーザーで実行</td>
+              <td><span class="st"><span class="g g--cond">○</span><b>弱い</b></span>ファイアウォール規則を持たず、環境レベルのオフライン制御に依存</td>
+            </tr>
+            <tr>
+              <td class="rowhead">管理者権限</td>
+              <td>初期セットアップに<b>必要</b>（ユーザー作成・ローカルポリシー変更のため）</td>
+              <td><b>不要</b></td>
+            </tr>
+            <tr>
+              <td class="rowhead">使いどころ</td>
+              <td>既定の選択。業務端末で管理者権限が取れる場合</td>
+              <td>管理者権限が無い／elevated のセットアップが失敗する場合</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><span class="mk">出典に関する注記：</span>このスライドの内容は <code>openai/codex</code> の実装構成と公開技術記事に基づきます。OpenAI 公式ドキュメントは本作業環境のネットワークポリシーにより参照できませんでした。導入前に <code>developers.openai.com/codex/windows</code> での確認を推奨します。<span class="chip chip--sec">二次情報</span></p>
+    </div>
+    <div class="rail">
+      <span class="sec">Codex on Windows</span>
+      <span class="spacer"></span>
+      <span class="num">07 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 08 ══ -->
+  <section class="slide" data-sec="Sandbox">
+    <div>
+      <div class="eyebrow">実装の内訳 — <span class="pname pname--claude">Claude Code</span></div>
+      <h2 class="title">Claude Code のサンドボックスは 3 環境で成立する</h2>
+    </div>
+    <div class="body">
+      <div class="split split--3">
+        <div class="col">
+          <div class="colhead colhead--mac">macOS</div>
+          <ul class="pts">
+            <li><b>Seatbelt</b> を使用。追加インストールは一切不要で、<code>/sandbox</code> コマンドから設定するだけ。</li>
+            <li>3 つのタブ（Mode / Overrides / ネットワーク許可）で承認方式と境界を設定。</li>
+            <li>依存パッケージが無いぶん、macOS が最も導入コストの低い環境。</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--mac">Linux / WSL2</div>
+          <ul class="pts">
+            <li><b>bubblewrap</b>（ファイルシステム隔離）＋ <b>socat</b>（ネットワークプロキシ）の 2 パッケージが必要。<code>apt-get install bubblewrap socat</code>。</li>
+            <li>任意の <b>seccomp フィルタ</b>（<code>@anthropic-ai/sandbox-runtime</code>）で Unix ドメインソケットの遮断を追加できる。</li>
+            <li>Ubuntu 24.04 以降は AppArmor が非特権ユーザー名前空間を制限するため、<code>bwrap</code> 用プロファイルの追加が必要な場合がある。</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--mac">Windows ネイティブ</div>
+          <ul class="pts">
+            <li class="warn"><b>サンドボックスは動作しない。</b>公式ドキュメントに明記されており、PowerShell ツールの既知の制限にも「On Windows, sandboxing is not supported」とある。</li>
+            <li>防御線は権限モード（Manual / Auto / Accept edits / Plan）と hooks のみ。</li>
+            <li>組織展開時は「Windows ホストにはサンドボックス設定を配らない、または WSL2／コンテナに寄せる」とドキュメントが明示的に案内している。</li>
+          </ul>
+        </div>
+      </div>
+      <p class="note"><span class="mk">WSL1 は不可：</span>bubblewrap が要求するカーネル機能が WSL2 にしか無いため。<code>wsl -l -v</code> でバージョンを確認し、「Sandboxing requires WSL2」と出たら WSL2 へ昇格します。</p>
+    </div>
+    <div class="rail">
+      <span class="sec">Claude Code Sandbox Internals</span>
+      <span class="spacer"></span>
+      <span class="num">08 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 09 ══ -->
+  <section class="slide" data-sec="Sandbox">
+    <div>
+      <div class="eyebrow">同じ Seatbelt でも挙動が違う</div>
+      <h2 class="title">macOS 固有の落とし穴（Claude Code）</h2>
+      <p class="lead">macOS はサンドボックスが「効きすぎる」方向の問題が出ます。Linux／WSL2 とは挙動が異なる点が公式に明記されています。</p>
+    </div>
+    <div class="body">
+      <div class="split split--2">
+        <div class="col">
+          <dl class="kv">
+            <dt>Apple Events が既定で遮断される</dt>
+            <dd><code>open</code> / <code>osascript</code> / ブラウザ認証フローが <b>error -600</b> で失敗します。<code>allowAppleEvents</code> で解除できますが、サンドボックス内のコマンドが他アプリを無許可で起動できるようになるため、コード実行の隔離は失われます。プロジェクト設定からは有効化できません。</dd>
+
+            <dt>Go 製 CLI が TLS 検証に失敗する</dt>
+            <dd><code>gh</code> / <code>gcloud</code> / <code>terraform</code> などが Seatbelt 下で TLS 検証に失敗することがあります。<code>excludedCommands</code> に列挙してサンドボックス外で実行するのが回避策です。</dd>
+          </dl>
+        </div>
+        <div class="col">
+          <dl class="kv">
+            <dt>認証情報マスクの挙動が OS で真逆</dt>
+            <dd>
+              <code>"mode": "mask"</code> を設定したとき——<br>
+              <b>Linux / WSL2：</b>センチネル値に置換したファイルを読ませ、送信時にプロキシが実値へ復元。ツールは<b>動作し続ける</b>。<br>
+              <b>macOS：</b>そのファイルの<b>読み取り自体を拒否</b>。<code>deny</code> と同じ効果になり、そのファイルで認証するツールはサンドボックス内で動かなくなる。
+            </dd>
+
+            <dt><code>--dangerously-skip-permissions</code> の制限</dt>
+            <dd>root / sudo 下では Linux・macOS ともに拒否されます（既知のサンドボックス内では自動的にスキップ）。</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:18px">
+        <b>読み方：</b>macOS は「隔離は強いが、外部ツールとの相性問題が出やすい」。Linux / WSL2 は「回避手段が用意されていて素直に動く」。同じ設定ファイルを配っても結果が変わるため、チームで OS が混在する場合は設定を OS 別に分ける必要があります。
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">macOS Caveats</span>
+      <span class="spacer"></span>
+      <span class="num">09 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 10 ══ -->
+  <section class="slide" data-sec="Sandbox">
+    <div>
+      <div class="eyebrow">ネイティブ Windows の実像</div>
+      <h2 class="title">Windows 固有の落とし穴（Claude Code）</h2>
+    </div>
+    <div class="body">
+      <div class="split split--2">
+        <div class="col">
+          <dl class="kv">
+            <dt>サンドボックスが無い分、承認モデルが唯一の防御線</dt>
+            <dd>ファイル書き込みもネットワークも OS レベルでは止まりません。権限モードと hooks の設計が Windows では相対的に重要になります。</dd>
+
+            <dt>Git for Windows は「任意」だが実質は分岐点</dt>
+            <dd>入れると Git Bash 経由で <b>Bash ツール</b>が使え、入れないと <b>PowerShell ツール</b>になります。自動検出に失敗する場合は <code>CLAUDE_CODE_GIT_BASH_PATH</code> を <code>settings.json</code> に設定します。</dd>
+
+            <dt>メモリ上限設定は Linux / WSL 限定</dt>
+            <dd><code>CLAUDE_CODE_TOOL_MEMORY_LIMIT</code>（暴走ビルドの抑止）はネイティブ Windows では使えません。</dd>
+          </dl>
+        </div>
+        <div class="col">
+          <dl class="kv">
+            <dt>実行ポリシーはプロセススコープで Bypass</dt>
+            <dd><code>.ps1</code> が既定の Windows でも動くよう、プロセススコープでのみ <code>Bypass</code> を指定します。グループポリシー（MachinePolicy / UserPolicy）は依然有効。端末の実効ポリシーに従わせるなら <code>CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY=1</code>。</dd>
+
+            <dt>文字コード（日本語環境で重要）</dt>
+            <dd>v2.1.214 以降、PowerShell 5.1 の <code>&gt;</code> / <code>&gt;&gt;</code> リダイレクトが UTF-8 で書き出されます。<b>それ以前は UTF-16LE</b> で、非 ASCII のパイプ入力が <code>?</code> 化したり Python が <code>UnicodeEncodeError</code> で落ちる問題がありました。</dd>
+
+            <dt>WSL2 から Windows バイナリを呼ぶとき</dt>
+            <dd><code>cmd.exe</code> / <code>powershell.exe</code> / <code>/mnt/c/</code> 配下の起動は Unix ソケット経由で Windows 側へ渡ります。サンドボックスの Unix ソケット設定に従うため、遮断するには <b>seccomp フィルタの導入が前提</b>です。</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Windows Caveats</span>
+      <span class="spacer"></span>
+      <span class="num">10 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 11 ══ -->
+  <section class="slide" data-sec="Shell">
+    <div>
+      <div class="eyebrow">実行モデル</div>
+      <h2 class="title">シェル：エージェントが実際に叩くコマンドの方言が変わる</h2>
+    </div>
+    <div class="body">
+      <div class="mxwrap">
+        <table class="mx">
+          <thead>
+            <tr>
+              <th style="width:16%">OS</th>
+              <th class="c-codex" style="width:42%">Codex</th>
+              <th class="c-claude" style="width:42%">Claude Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rowhead">macOS</td>
+              <td class="col-codex">既定のシェル（zsh / bash）を Seatbelt 下で実行</td>
+              <td class="col-claude"><b>Bash ツール</b>が主。PowerShell ツールは<b>オプトイン</b>で、<code>pwsh</code> 7 以上を PATH に置く必要がある</td>
+            </tr>
+            <tr>
+              <td class="rowhead">Windows<span class="sub">ネイティブ</span></td>
+              <td class="col-codex"><b>PowerShell をネイティブに使用</b><span class="detail">Windows らしいコマンドがそのまま生成される<span class="chip chip--sec">二次情報</span></span></td>
+              <td class="col-claude"><b>Git Bash の有無で二段構え</b><span class="detail">Git Bash 無し → PowerShell ツールが自動有効<br>Git Bash 有り → PowerShell ツールは段階的ロールアウト（<code>CLAUDE_CODE_USE_POWERSHELL_TOOL=1/0</code> で明示制御）<br>有効時は PowerShell が主シェル扱い。POSIX スクリプト用に Bash ツールも併存</span></td>
+            </tr>
+            <tr>
+              <td class="rowhead">Linux / WSL2</td>
+              <td class="col-codex">bash（Linux 実装のサンドボックス下）</td>
+              <td class="col-claude">Bash ツール。PowerShell ツールはオプトイン（<code>pwsh</code> 7+ 必須）</td>
+            </tr>
+            <tr>
+              <td class="rowhead">個別指定</td>
+              <td class="col-codex">—</td>
+              <td class="col-claude">hooks は <code>"shell": "powershell"</code>、skill は frontmatter の <code>shell: powershell</code>、対話 <code>!</code> は <code>"defaultShell": "powershell"</code> で個別に切替可能</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout" style="margin-top:16px">
+        <b>運用上の含意：</b>hooks や CI で shell コマンドを検査する場合、Claude Code では <code>Bash</code> だけでなく <code>Bash|PowerShell</code> の両方にマッチさせる必要があります。片方だけの matcher は Windows で素通りします。
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Shell Execution</span>
+      <span class="spacer"></span>
+      <span class="num">11 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 12 ══ -->
+  <section class="slide" data-sec="Desktop">
+    <div>
+      <div class="eyebrow">GUI</div>
+      <h2 class="title">デスクトップアプリの対比</h2>
+    </div>
+    <div class="body">
+      <div class="split split--2">
+        <div class="col">
+          <div class="colhead colhead--codex">Codex app</div>
+          <ul class="pts">
+            <li><b>macOS が先行</b>（2026 年 2 月）、<b>Windows は 2026 年 3 月 4 日</b>に追随。約 1 か月の時間差があった。</li>
+            <li>複数エージェントのオーケストレーションを中心に据えた「エージェントの司令塔」という位置づけ。</li>
+            <li>Windows 版は PowerShell とネイティブサンドボックスで動作し、WSL2 を選ぶこともできる。</li>
+            <li>Windows 版で利用できる中核機能：worktrees、Automations、Skills、アプリ内ブラウザ、Git 連携、成果物プレビュー、プラグイン。</li>
+            <li class="warn">Windows 推奨は Windows 11。Windows 10 は best-effort 扱い。</li>
+          </ul>
+          <p class="note">情報源は公開報道・技術記事<span class="chip chip--sec">二次情報</span></p>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--claude">Claude デスクトップの Code タブ</div>
+          <ul class="pts">
+            <li><b>macOS（Universal）/ Windows（x64・ARM64）/ Linux（beta）</b>を同時に提供。ARM64 Windows のインストーラも用意されている。</li>
+            <li>並列セッション（各セッションが独立した git worktree）、差分レビュー、統合ターミナル、ファイルペイン、アプリプレビュー、PR 監視と自動マージ、スケジュールタスク。</li>
+            <li class="warn"><b>Windows のみ：</b>ローカルセッションに <b>Git のインストールが必須</b>。macOS は多くの環境で標準搭載。</li>
+            <li class="warn"><b>Windows のみ：</b>環境ピッカーで <b>WSL セッション</b>を選べる（WSL2 必須、distro 内に <code>git</code> が必要）。</li>
+            <li>CLI と同一エンジンで、CLAUDE.md・MCP・hooks・skills・設定を共有する。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Desktop Apps</span>
+      <span class="spacer"></span>
+      <span class="num">12 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 13 ══ -->
+  <section class="slide" data-sec="Desktop">
+    <div>
+      <div class="eyebrow">最大の macOS / Windows 差</div>
+      <h2 class="title">デスクトップ操作：macOS だけが「背後で並列に」動ける</h2>
+    </div>
+    <div class="body">
+      <div class="split split--2">
+        <div class="col">
+          <div class="colhead colhead--codex">Codex — Computer Use</div>
+          <dl class="kv">
+            <dt><span class="chip chip--mac">macOS</span> バックグラウンド動作</dt>
+            <dd>エージェントが自前のカーソルで画面を見て・クリックし・入力します。<b>複数のエージェントが並列に動作し、ユーザーが他アプリで作業していても干渉しません。</b></dd>
+            <dt><span class="chip chip--win">Windows</span> フォアグラウンド占有</dt>
+            <dd><b>アクティブデスクトップ上でのみ動作</b>し、同じ Windows セッションを使いながらのバックグラウンド実行はできません。実行中はポインタと前面が奪われます。</dd>
+          </dl>
+          <p class="note">情報源は公開報道・技術記事<span class="chip chip--sec">二次情報</span></p>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--claude">Claude 側の対応領域</div>
+          <ul class="pts">
+            <li>Claude Code には OS 全体を操作する同等の Computer Use 機能は<b>提供されていません</b>。担当領域はデスクトップアプリ内の<b>ブラウザペイン</b>とアプリプレビューです（開発中のアプリを見て、エンドポイントを叩き、ログを確認して反復する）。</li>
+            <li>自律作業は別タブの <b>Cowork</b> が担当し、隔離された VM 内で実行されます。ここに OS 差が出ます：<br>
+              <span class="chip chip--mac">macOS</span> Apple Virtualization.framework（<b>Apple Silicon が必要</b>）<br>
+              <span class="chip chip--win">Windows</span> Hyper-V（<b>Pro / Enterprise / Education が必要、Home では不可</b>）<span class="chip chip--sec">二次情報</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout callout--alert" style="margin-top:16px">
+        <b>ここが選定を左右する：</b>「エージェントに GUI アプリを触らせつつ、自分は同じマシンで作業を続けたい」という要件がある場合、現時点で成立するのは <b>macOS ＋ Codex</b> の組み合わせだけです。Windows では前面占有が前提になります。
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Computer Use</span>
+      <span class="spacer"></span>
+      <span class="num">13 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 14 ══ -->
+  <section class="slide" data-sec="WSL">
+    <div>
+      <div class="eyebrow">Windows 運用の要</div>
+      <h2 class="title">WSL の位置づけが両者で決定的に違う</h2>
+    </div>
+    <div class="body">
+      <div class="split split--2">
+        <div class="col">
+          <div class="colhead colhead--codex">Codex にとっての WSL2</div>
+          <ul class="pts">
+            <li><b>選択肢のひとつ。</b>ネイティブ Windows サンドボックスがあるため必須ではない。</li>
+            <li>選ぶ理由：プロジェクトが Linux ツールチェーンに依存している／リポジトリと開発フローが既に WSL2 内にある／ネイティブサンドボックスがどちらのモードでも動かない。</li>
+            <li>公式の推奨は「既に WSL2 で開発しているのでなければ、まず Windows 用スタンドアロンインストーラから」。</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--claude">Claude Code にとっての WSL2</div>
+          <ul class="pts">
+            <li class="warn"><b>Windows でサンドボックスを使うための唯一の道。</b>ネイティブ Windows には代替実装が存在しない。</li>
+            <li>デスクトップアプリからも WSL セッションを選択でき、Claude Code 本体・ツール・git がすべて distro 内で動く。</li>
+            <li class="warn">WSL セッションで<b>まだ使えない機能</b>：統合ターミナル／コネクタとプラグイン／セッションのフォーク／ファイルブラウザペイン／<code>@</code> のファイル補完。</li>
+            <li>組織管理端末では WSL セッション自体が管理者によって無効化されている場合がある。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:18px">
+        <b>両者共通の注意：</b>リポジトリを <code>/mnt/c/...</code>（Windows 側のディスク）に置くと、ネットワークファイルシステム経由になり I/O が遅く、ファイル監視も壊れます。WSL を使うなら<b>リポジトリは distro 内のファイルシステムに置く</b>のが前提です。
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">WSL Positioning</span>
+      <span class="spacer"></span>
+      <span class="num">14 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 15 ══ -->
+  <section class="slide" data-sec="Terminal">
+    <div>
+      <div class="eyebrow">日々の操作感</div>
+      <h2 class="title">ターミナル体験の差（Claude Code CLI）</h2>
+      <p class="lead">意外にも Shift+Enter は Windows Terminal のほうが素直に動きます。逆に macOS には Option キーという固有の設定が必要です。</p>
+    </div>
+    <div class="body">
+      <div class="split split--2">
+        <div class="col">
+          <div class="colhead colhead--mac">Shift+Enter で改行できるか</div>
+          <div class="mxwrap">
+            <table class="mx">
+              <thead><tr><th style="width:66%">ターミナル</th><th>状態</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>Ghostty / Kitty / iTerm2 / WezTerm / Warp / Apple Terminal / <b>Windows Terminal</b></td>
+                  <td><span class="st"><span class="g g--yes">●</span>設定不要</span></td>
+                </tr>
+                <tr>
+                  <td>VS Code / Cursor / Devin Desktop / Alacritty / Zed</td>
+                  <td><span class="st"><span class="g g--cond">○</span><code>/terminal-setup</code></span></td>
+                </tr>
+                <tr>
+                  <td>gnome-terminal / JetBrains 系（PyCharm 等）</td>
+                  <td><span class="st st--no"><span class="g g--no">✕</span>不可</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note"><span class="mk">共通の代替：</span><code>Ctrl+J</code>、または <code>\</code> を打ってから Enter。どのターミナルでも設定なしで動きます。</p>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--mac">OS 固有の設定</div>
+          <dl class="kv">
+            <dt><span class="chip chip--mac">macOS</span> Option キーがメタキーにならない</dt>
+            <dd>Option+Enter（改行）や Option+P（モデル切替）などが既定では効きません。Apple Terminal は「Use Option as Meta Key」を有効化、iTerm2 は Left/Right Option を「Esc+」に設定します。<b>Windows にはこの手間がありません。</b></dd>
+
+            <dt>デスクトップ通知が出るターミナルが限られる</dt>
+            <dd>既定でデスクトップ通知が届くのは <b>Ghostty / Kitty / iTerm2</b> のみ。それ以外は <code>preferredNotifChannel: "terminal_bell"</code> にするか Notification フックを設定します。この 3 つは macOS で使われることが多く、結果として通知体験は macOS 側が有利になりがちです。</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Terminal Experience</span>
+      <span class="spacer"></span>
+      <span class="num">15 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 16 ══ -->
+  <section class="slide" data-sec="Decision">
+    <div>
+      <div class="eyebrow">選定ガイド</div>
+      <h2 class="title">要件から逆引きする</h2>
+    </div>
+    <div class="body">
+      <div class="mxwrap">
+        <table class="mx zebra">
+          <thead>
+            <tr><th style="width:34%">要件</th><th style="width:22%">推奨</th><th>理由と条件</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rowhead">Windows ネイティブのまま、エージェントに強い隔離をかけたい</td>
+              <td><span class="pname pname--codex">Codex</span></td>
+              <td>ネイティブ Windows サンドボックスを持つのは Codex のみ。管理者権限が取れるなら <code>elevated</code> でファイアウォールによるネットワーク隔離まで効く。Claude Code を使うなら WSL2 に寄せる。</td>
+            </tr>
+            <tr>
+              <td class="rowhead">Windows で Linux ツールチェーン（Docker / Node / Python）を使う</td>
+              <td>どちらでも可</td>
+              <td>両者とも WSL2 で Linux 実装の隔離が効く。Claude Code はこの構成でフル機能。ただしデスクトップの WSL セッションでは一部機能が未対応。</td>
+            </tr>
+            <tr>
+              <td class="rowhead">Windows で .NET / MSVC / PowerShell 中心の開発</td>
+              <td><span class="pname pname--codex">Codex</span></td>
+              <td>PowerShell をネイティブに扱いつつサンドボックスも効く。Claude Code でも PowerShell ツールで作業自体は可能だが、サンドボックス無しを許容する判断が必要。</td>
+            </tr>
+            <tr>
+              <td class="rowhead">macOS 中心のチーム</td>
+              <td>要件で選ぶ</td>
+              <td>両者とも Seatbelt で隔離が効き、OS 起因の差はほぼ無い。GUI・並列セッション・運用機能で比較するのが妥当。</td>
+            </tr>
+            <tr>
+              <td class="rowhead">エージェントに GUI アプリを操作させたい</td>
+              <td><span class="pname pname--codex">Codex</span> ＋ macOS</td>
+              <td>自分の作業を止めずに並列実行できるのは macOS のみ。Windows では前面占有になるため、専用マシンや仮想デスクトップの用意が前提。</td>
+            </tr>
+            <tr>
+              <td class="rowhead">OS 混在チームで設定を統一したい</td>
+              <td><span class="pname pname--claude">Claude Code</span></td>
+              <td>設定・チャンネル・最低バージョンを managed settings で組織全体に強制でき、CLI とデスクトップが設定を共有する。ただしサンドボックス設定は Windows ホストを除外するか WSL2 前提にする必要がある。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Decision Guide</span>
+      <span class="spacer"></span>
+      <span class="num">16 / 17</span>
+    </div>
+  </section>
+
+  <!-- ══ 17 ══ -->
+  <section class="slide" data-sec="Sources">
+    <div>
+      <div class="eyebrow">出典と注意事項</div>
+      <h2 class="title">この資料の根拠と、確認すべき点</h2>
+    </div>
+    <div class="body">
+      <div class="split split--2">
+        <div class="col">
+          <div class="colhead colhead--mac">一次情報として参照したもの</div>
+          <ul class="pts">
+            <li><b>Claude Code 公式ドキュメント</b>（<code>code.claude.com/docs</code>）— Advanced setup / Sandboxing / Tools reference / Desktop quickstart / Desktop in WSL / Terminal config。本資料の Claude Code 側の記述はすべてここに基づきます。</li>
+            <li><b><code>openai/codex</code> リポジトリ</b> — README のインストール手順、および <code>codex-rs/sandboxing/src/</code> の実装ファイル構成（<code>seatbelt.rs</code>／<code>landlock.rs</code>／<code>bwrap.rs</code>／<code>windows.rs</code>）で、OS 別実装の存在を確認しています。</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="colhead colhead--mac">確認いただきたい点</div>
+          <ul class="pts">
+            <li class="warn"><b>OpenAI 公式ドキュメント（<code>developers.openai.com</code>）は、本資料の作成環境のネットワークポリシーにより参照できませんでした。</b><span class="chip chip--sec">二次情報</span>を付したスライド——Codex の Windows サンドボックス内部設計、Codex app のリリース時期、Computer Use の macOS / Windows 差、Cowork の VM 要件——は公開報道および技術解説記事に基づきます。導入判断の前に <code>developers.openai.com/codex/windows</code> で裏取りしてください。</li>
+            <li class="warn"><b>両製品とも更新が速い。</b>Codex CLI は <code>0.148.0-alpha</code> 系が日次で更新され、Claude Code も Windows 関連の挙動がバージョンで変わっています（例：PowerShell の UTF-8 出力は v2.1.214 以降）。<b>記載内容は 2026 年 8 月 18 日時点</b>のものとしてお読みください。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:18px">
+        <b>最も安定した結論：</b>OS 差の本質は「その OS が提供する隔離プリミティブ（Seatbelt / Landlock / 制限付きトークン）を、そのエージェントが実装しているか」です。個別の機能名は変わっても、この構図は当面変わりません。
+      </div>
+    </div>
+    <div class="rail">
+      <span class="sec">Sources &amp; Caveats</span>
+      <span class="spacer"></span>
+      <span class="num">17 / 17</span>
+    </div>
+  </section>
+
+  </div>
+</div>
+
+<div class="hint" id="hint">← → / SPACE で移動 · P で印刷（PDF 保存）</div>
+
+<script>
+(function () {
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
+  var total = slides.length;
+  var index = 0;
+
+  /* ── Build nav controls into every rail ─────────────────── */
+  slides.forEach(function (slide, i) {
+    var rail = slide.querySelector('.rail');
+    if (!rail) return;
+
+    var ticks = document.createElement('div');
+    ticks.className = 'ticks';
+    slides.forEach(function (_, j) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-label', (j + 1) + '枚目へ');
+      b.addEventListener('click', function () { go(j); });
+      ticks.appendChild(b);
+    });
+
+    var arrows = document.createElement('div');
+    arrows.className = 'arrows';
+    var prev = document.createElement('button');
+    prev.type = 'button'; prev.textContent = '←';
+    prev.setAttribute('aria-label', '前のスライド');
+    prev.addEventListener('click', function () { go(index - 1); });
+    var next = document.createElement('button');
+    next.type = 'button'; next.textContent = '→';
+    next.setAttribute('aria-label', '次のスライド');
+    next.addEventListener('click', function () { go(index + 1); });
+    arrows.appendChild(prev); arrows.appendChild(next);
+
+    var num = rail.querySelector('.num');
+    rail.insertBefore(ticks, num);
+    rail.insertBefore(arrows, num);
+    slide._ticks = ticks;
+    slide._prev = prev;
+    slide._next = next;
+  });
+
+  /* ── Navigation ─────────────────────────────────────────── */
+  function go(n) {
+    if (n < 0) n = 0;
+    if (n > total - 1) n = total - 1;
+    index = n;
+    slides.forEach(function (s, i) {
+      s.classList.toggle('is-active', i === index);
+      s.setAttribute('aria-hidden', i === index ? 'false' : 'true');
+      if (s._ticks) {
+        Array.prototype.forEach.call(s._ticks.children, function (b, j) {
+          b.setAttribute('aria-current', j === index ? 'true' : 'false');
+        });
+      }
+      if (s._prev) s._prev.disabled = index === 0;
+      if (s._next) s._next.disabled = index === total - 1;
+    });
+    if (history.replaceState) history.replaceState(null, '', '#' + (index + 1));
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'PageDown': case ' ': case 'Enter':
+        e.preventDefault(); go(index + 1); break;
+      case 'ArrowLeft': case 'PageUp': case 'Backspace':
+        e.preventDefault(); go(index - 1); break;
+      case 'Home': e.preventDefault(); go(0); break;
+      case 'End': e.preventDefault(); go(total - 1); break;
+      case 'p': case 'P': e.preventDefault(); window.print(); break;
+    }
+  });
+
+  /* ── Touch swipe ────────────────────────────────────────── */
+  var tx = null, ty = null;
+  document.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX; ty = e.changedTouches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    var dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(index + (dx < 0 ? 1 : -1));
+    tx = ty = null;
+  }, { passive: true });
+
+  /* ── Scale the fixed stage to the viewport ──────────────── */
+  function fit() {
+    var pad = window.innerWidth < 700 ? 12 : 40;
+    var s = Math.min(
+      (window.innerWidth - pad * 2) / 1280,
+      (window.innerHeight - pad * 2) / 720
+    );
+    deck.style.transform = 'scale(' + Math.max(s, 0.1) + ')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  /* ── Start from the hash, then fade the hint ────────────── */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  go(isNaN(start) ? 0 : start - 1);
+
+  var hint = document.getElementById('hint');
+  setTimeout(function () { hint.style.opacity = '0'; }, 5000);
+})();
+</script>
