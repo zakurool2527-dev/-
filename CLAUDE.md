@@ -49,6 +49,7 @@ migrations/                D1 マイグレーション
 npm run dev                 # Vite 開発サーバー
 npm run dev:sandbox         # wrangler pages dev（D1 ローカル、port 3000）
 npm run build               # dist/ にビルド
+npm run typecheck           # tsc --noEmit で型チェック
 npm run deploy              # ビルドして Cloudflare Pages にデプロイ
 npm run cf-typegen          # wrangler の型生成
 npm run db:migrate:local    # D1 マイグレーション（ローカル）
@@ -56,8 +57,51 @@ npm run db:migrate:prod     # D1 マイグレーション（本番）
 npm run db:console:local    # D1 コンソール（ローカル）
 ```
 
-テスト用のスクリプトは `npm test` が `curl http://localhost:3000` を叩くだけで、
-自動テストは未整備です。
+`npm test` は `curl http://localhost:3000` を叩くだけで、自動テストは未整備です。
+
+## クラウドセッションでの制約
+
+クラウドセッションは毎回まっさらな clone から始まります。依存関係は
+`.claude/hooks/session-start.sh`（SessionStart フック）が自動で
+`npm install` するため、手動インストールは不要です。
+
+| コマンド | クラウドセッション | 備考 |
+| --- | --- | --- |
+| `npm install` | ✅ | SessionStart フックが自動実行 |
+| `npm run build` | ✅ | |
+| `npm run typecheck` | ✅ | 既存エラーあり（下記） |
+| `npm run dev` | ❌ | Cloudflare へのログインが必要 |
+| `npm run dev:sandbox` | ❌ | 同上 |
+| `npm test` | ❌ | 上記サーバーが起動できないため |
+
+**理由**: `wrangler.jsonc` の `ai` バインディングはローカルエミュレーションに
+対応しておらず（`env.AI` が常に `remote` モード）、`wrangler` がリモート
+プロキシセッションを張ろうとして次のエラーで失敗します。
+
+```
+You must be logged in to use wrangler dev in remote mode.
+```
+
+クラウドセッションでアプリを起動して動作確認したい場合は、クラウド環境の
+設定に `CLOUDFLARE_API_TOKEN` を登録してください。登録しない場合は、
+ビルドと型チェックまでが検証可能な範囲です。
+
+## 型チェックの既知のエラー
+
+`npm run typecheck` は現在 4 件のエラーを報告します（いずれも型チェック
+導入前から存在していたもので、未修正です）。
+
+| 箇所 | 内容 |
+| --- | --- |
+| `src/index.tsx:13` | `hono/cloudflare-workers` の `serveStatic` が `manifest` を要求。本プロジェクトは Pages なので `hono/cloudflare-pages` が適切な可能性 |
+| `src/routes/api.ts:17` | `formData.get('file') as File` が不正なキャスト（`as unknown as File` が必要） |
+| `src/utils/pdfAnalyzer.ts:36` | モデル ID `@cf/meta/llama-3.1-8b-instruct` が `AiModels` に存在しない |
+| `src/utils/proposalGenerator.ts:54` | 同上 |
+
+最後の 2 件は要注意です。`@cloudflare/workers-types` 4.20251111.0 が認識する
+Llama 3.1 8B は `@cf/meta/llama-3.1-8b-instruct-awq` と
+`@cf/meta/llama-3.1-8b-instruct-fp8` のみで、コード中の ID は含まれません。
+AI 呼び出しが実際に失敗していないか確認してください。
 
 ## 既知の仕様
 
