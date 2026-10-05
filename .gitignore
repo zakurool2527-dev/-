@@ -33,3 +33,8 @@ logs/
 # Uploads (temporary)
 uploads/
 temp/
+
+# Claude Code
+# 共有設定は .claude/settings.json（コミットする）。
+# 個人用の上書きだけを git 管理外にする。
+.claude/settings.local.json
