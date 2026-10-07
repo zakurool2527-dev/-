@@ -84,9 +84,12 @@ export const register: Register = on => {
     const hint = percent >= 80 ? '  /compact でダイエットしよう' : isSleeping ? '  おやすみ中' : ''
 
     const { Box, Text } = $.ui.resolve(e)
+    // ほかのMod（danger-guard など）の帯も消さずに上へ並べる
+    const below = await next(e)
 
     return (
       <Box flexDirection="column">
+        {below}
         <Box flexDirection="column" marginLeft={offset}>
           {rows.map(row => (
             <Text color={color} wrap="truncate-end">

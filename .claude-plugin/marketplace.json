@@ -1,0 +1,19 @@
+{
+  "name": "zakurool-mods",
+  "owner": { "name": "zakurool2527-dev" },
+  "metadata": {
+    "description": "自作の Claude Code Mod 集"
+  },
+  "plugins": [
+    {
+      "name": "context-cat",
+      "source": "./mods/context-cat",
+      "description": "入力欄の上を猫が走り、コンテキストが増えるほど太って赤くなる"
+    },
+    {
+      "name": "danger-guard",
+      "source": "./mods/danger-guard",
+      "description": "危険なコマンドを一時停止し、影響範囲をアニメーション付きで見せてから実行するか確認する"
+    }
+  ]
+}

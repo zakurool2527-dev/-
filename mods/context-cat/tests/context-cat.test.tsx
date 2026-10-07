@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
+import type { On } from 'claude-code'
 
 import { STAGES, catRows, colorOf, stageOf } from '../hooks/cat'
 
@@ -13,6 +14,14 @@ const band = (isWorking: boolean) => ({
     view: {},
   },
 })
+
+/** エンジン自身の帯（ここでは空）を用意する */
+function emptyBand(on: On) {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box />
+  })
+}
 
 const measure = (percent: number, tokens: number) => ({
   context: { percent, tokens, window: 200000 },
@@ -40,7 +49,8 @@ describe('猫の絵', () => {
 })
 
 describe('入力欄の上の帯', () => {
-  test('計測前は案内を出す', async $ => {
+  test('計測前は案内を出す', async ($, on) => {
+    emptyBand(on)
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ plugin: 'context-cat', surface, ...band(false) })
       expect(await ui.find({ type: 'Text', text: /計測待ち/ })).toBeDefined()
@@ -50,6 +60,7 @@ describe('入力欄の上の帯', () => {
 
   test('使用量に応じて体型・割合・色が変わる', async ($, on) => {
     on('session.measure', (_$, e) => ({ changed: e.changed }))
+    emptyBand(on)
     await $.session.measure(measure(85, 170000))
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ plugin: 'context-cat', surface, ...band(true) })
@@ -67,6 +78,7 @@ describe('入力欄の上の帯', () => {
 
   test('待機中は猫が眠る', async ($, on) => {
     on('session.measure', (_$, e) => ({ changed: e.changed }))
+    emptyBand(on)
     await $.session.measure(measure(10, 20000))
     const ui = await $.ui.mount({ plugin: 'context-cat', surface: 'terminal', ...band(false) })
     expect(await ui.find({ type: 'Text', text: /zZ/ })).toBeDefined()
