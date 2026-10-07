@@ -1,0 +1,3 @@
+# Claude Code が読み込み時に自動で書き出すファイル
+*/.claude-plugin/types/
+*/tsconfig.json

@@ -1,0 +1,7 @@
+{
+  "name": "danger-guard",
+  "version": "0.1.0",
+  "description": "削除・強制プッシュ・本番デプロイなどの危険なコマンドを一時停止し、影響範囲をアニメーション付きで見せてから実行するか確認する",
+  "author": { "name": "zakurool2527-dev" },
+  "types": "./types/index.d.ts"
+}
