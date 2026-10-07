@@ -1,0 +1,6 @@
+{
+  "name": "context-cat",
+  "version": "0.1.0",
+  "description": "入力欄の上を猫が走り、コンテキストが増えるほど太って赤くなる",
+  "types": "./types/index.d.ts"
+}

@@ -1,0 +1,4 @@
+{
+  "description": "context-cat の hooks module",
+  "modules": ["./register.tsx"]
+}
